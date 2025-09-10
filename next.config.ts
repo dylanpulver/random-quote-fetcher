@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['puppeteer'],
+  serverExternalPackages: ['puppeteer-core', '@sparticuz/chromium'],
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
