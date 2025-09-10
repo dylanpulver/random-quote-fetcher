@@ -148,13 +148,13 @@ export default function Home() {
         await new Promise((resolve) => setTimeout(resolve, randomDelay))
       }
 
-      // Fetch the actual quote
+      // Fetch the actual quote using simple scraper
       const response = await fetch('/api/scrape-quote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ cellId: cellIndex })
+        body: JSON.stringify({ cellId: cellIndex, useSimple: true })
       })
 
       if (!response.ok) {
@@ -320,7 +320,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, startScrapingWithSSE])
+  }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, startScrapingWithSSE, startScrapingFallback])
 
   return (
     <main className="min-h-screen p-4 sm:p-8 bg-background">

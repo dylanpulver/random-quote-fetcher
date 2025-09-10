@@ -2,11 +2,18 @@ import { ScrapingProgress, scrapingService } from '@/lib/scraping-service';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body;
+  try {
+    body = await request.json();
+  } catch (error) {
+    console.error('Invalid JSON in request body:', error);
+    return new Response('Invalid JSON', { status: 400 });
+  }
+
   const { cellId } = body;
 
   if (typeof cellId !== 'number') {
-    return new Response('cellId is required', { status: 400 });
+    return new Response('cellId is required and must be a number', { status: 400 });
   }
 
   // Set up SSE headers
@@ -20,18 +27,34 @@ export async function POST(request: NextRequest) {
 
   const encoder = new TextEncoder();
   let controller: ReadableStreamDefaultController<Uint8Array>;
+  let isClosed = false;
 
   const stream = new ReadableStream({
     start(ctrl) {
       controller = ctrl;
     },
     cancel() {
-      // Clean up if stream is cancelled
+      isClosed = true;
     }
   });
 
+  const sendMessage = (data: Record<string, unknown>) => {
+    if (isClosed) return;
+
+    const message = `data: ${JSON.stringify(data)}\n\n`;
+
+    try {
+      controller.enqueue(encoder.encode(message));
+    } catch (error) {
+      console.error('Error sending SSE message:', error);
+      isClosed = true;
+    }
+  };
+
   // Start scraping with progress updates
   scrapingService.scrapeQuote((progress: ScrapingProgress) => {
+    if (isClosed) return;
+
     const data = {
       cellId,
       stage: progress.stage,
@@ -40,15 +63,11 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now()
     };
 
-    const message = `data: ${JSON.stringify(data)}\n\n`;
-
-    try {
-      controller.enqueue(encoder.encode(message));
-    } catch (error) {
-      console.error('Error sending SSE message:', error);
-    }
+    sendMessage(data);
   })
   .then((quote) => {
+    if (isClosed) return;
+
     // Send final result
     const finalData = {
       cellId,
@@ -57,32 +76,36 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now()
     };
 
-    const message = `data: ${JSON.stringify(finalData)}\n\n`;
+    sendMessage(finalData);
 
     try {
-      controller.enqueue(encoder.encode(message));
       controller.close();
     } catch (error) {
-      console.error('Error sending final SSE message:', error);
+      console.error('Error closing controller:', error);
     }
+    isClosed = true;
   })
   .catch((error) => {
+    if (isClosed) return;
+
+    console.error('Scraping error for cell', cellId, ':', error);
+
     // Send error
     const errorData = {
       cellId,
       stage: 'error',
-      error: error.message,
+      error: error.message || 'Unknown scraping error',
       timestamp: Date.now()
     };
 
-    const message = `data: ${JSON.stringify(errorData)}\n\n`;
+    sendMessage(errorData);
 
     try {
-      controller.enqueue(encoder.encode(message));
       controller.close();
-    } catch (error) {
-      console.error('Error sending error SSE message:', error);
+    } catch (closeError) {
+      console.error('Error closing controller after error:', closeError);
     }
+    isClosed = true;
   });
 
   return new Response(stream, { headers });

@@ -1,10 +1,20 @@
 import { scrapingService } from '@/lib/scraping-service';
+import { simpleScrapingService } from '@/lib/simple-scraper';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { cellId } = body;
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
+    const { cellId, useSimple = false } = body;
 
     if (typeof cellId !== 'number') {
       return NextResponse.json(
@@ -13,15 +23,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get quote from cache if available, otherwise scrape
-    const quote = await scrapingService.getRandomQuote();
+    let quote;
+    let method = 'puppeteer';
+
+    if (useSimple) {
+      // Use simple HTTP-based scraping
+      quote = await simpleScrapingService.getRandomQuote();
+      method = 'simple';
+    } else {
+      try {
+        // Try Puppeteer first
+        quote = await scrapingService.getRandomQuote();
+      } catch (puppeteerError) {
+        console.warn('Puppeteer failed, falling back to simple scraper:', puppeteerError);
+        quote = await simpleScrapingService.getRandomQuote();
+        method = 'simple-fallback';
+      }
+    }
 
     return NextResponse.json({
       success: true,
       cellId,
       quote,
+      method,
       cacheInfo: {
-        cacheSize: scrapingService.cacheSize,
+        puppeteerCache: scrapingService.cacheSize,
+        simpleCache: simpleScrapingService.cacheSize,
         usedQuotes: scrapingService.usedQuotesCount,
         queueLength: scrapingService.queueLength,
         activeRequests: scrapingService.activeRequestsCount
@@ -45,7 +72,8 @@ export async function GET() {
   return NextResponse.json({
     status: 'Quote scraping service is running',
     cacheInfo: {
-      cacheSize: scrapingService.cacheSize,
+      puppeteerCache: scrapingService.cacheSize,
+      simpleCache: simpleScrapingService.cacheSize,
       usedQuotes: scrapingService.usedQuotesCount,
       queueLength: scrapingService.queueLength,
       activeRequests: scrapingService.activeRequestsCount
