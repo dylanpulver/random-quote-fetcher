@@ -453,7 +453,7 @@ export default function Home() {
                 <div>
                   <h3 className="text-sm font-semibold text-slate-800 mb-2">Quote</h3>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    "{cellContent[focusedCell].text}"
+                    &ldquo;{cellContent[focusedCell].text}&rdquo;
                   </p>
                 </div>
                 <div>
