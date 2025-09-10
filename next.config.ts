@@ -1,11 +1,23 @@
-const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: ['puppeteer']
   },
-  typescript: {
-    // This will ignore TypeScript errors during builds
-    ignoreBuildErrors: true,
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    }
+    return config
   },
+  // Enable longer timeouts for scraping operations
+  api: {
+    responseLimit: false,
+  },
+  // Optimize for production
+  images: {
+    unoptimized: true
+  }
 };
 
 export default nextConfig;
