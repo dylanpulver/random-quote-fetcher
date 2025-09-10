@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "postinstall": "npx puppeteer browsers install chrome"
+    "lint": "next lint"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
@@ -16,7 +15,8 @@
     "postcss": "^8.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "puppeteer": "^23.9.0"
+    "puppeteer": "^23.9.0",
+    "@sparticuz/chromium": "^129.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
