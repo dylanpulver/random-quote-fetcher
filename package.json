@@ -15,7 +15,7 @@
     "postcss": "^8.5.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "puppeteer": "^23.9.0",
+    "puppeteer-core": "^23.9.0",
     "@sparticuz/chromium": "^129.0.0"
   },
   "devDependencies": {
@@ -29,7 +29,8 @@
     "tailwindcss": "^4.0.14",
     "typescript": "^5",
     "postcss": "^8",
-    "autoprefixer": "^10.4.14"
+    "autoprefixer": "^10.4.14",
+    "puppeteer": "^23.9.0"
   },
   "engines": {
     "node": ">=18.0.0"
