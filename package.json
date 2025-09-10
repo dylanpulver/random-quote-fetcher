@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
@@ -29,5 +30,8 @@
     "typescript": "^5",
     "postcss": "^8",
     "autoprefixer": "^10.4.14"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
