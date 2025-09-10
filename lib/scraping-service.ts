@@ -65,7 +65,7 @@ class ScrapingService {
     if (this.pagePool.length > 0) {
       return this.pagePool.pop()!;
     }
-    
+
     // If no pages available, wait a bit and try again
     await new Promise(resolve => setTimeout(resolve, 100));
     return this.getPage();
@@ -115,7 +115,7 @@ class ScrapingService {
 
   private async performScraping(onProgress?: (progress: ScrapingProgress) => void): Promise<Quote> {
     const page = await this.getPage();
-    
+
     try {
       // Check if we have unused quotes in cache first
       if (this.quotesCache.length > 0) {
@@ -123,7 +123,7 @@ class ScrapingService {
         if (availableQuotes.length > 0) {
           const randomQuote = availableQuotes[Math.floor(Math.random() * availableQuotes.length)];
           this.usedQuotes.add(randomQuote.text);
-          
+
           // Still show loading animation for UX
           await this.simulateLoadingStages(onProgress);
           return randomQuote;
@@ -146,7 +146,7 @@ class ScrapingService {
       // Stage 2: Logging in
       onProgress?.({ stage: 2, message: stages[1], totalStages: 5 });
       await page.goto('https://quotes.toscrape.com/login', { waitUntil: 'networkidle2' });
-      
+
       // Perform login
       await page.type('#username', 'admin');
       await page.type('#password', 'admin');
@@ -157,34 +157,34 @@ class ScrapingService {
       // Stage 3: Browsing to page
       const randomPage = Math.floor(Math.random() * 10) + 1;
       onProgress?.({ stage: 3, message: `Browsing to page ${randomPage}...`, totalStages: 5 });
-      
+
       const targetUrl = randomPage === 1 ? 'https://quotes.toscrape.com/' : `https://quotes.toscrape.com/page/${randomPage}/`;
       await page.goto(targetUrl, { waitUntil: 'networkidle2' });
       await this.randomDelay();
 
       // Stage 4: Selecting quote
       onProgress?.({ stage: 4, message: stages[3], totalStages: 5 });
-      
+
       // Scrape quotes from current page
       const newQuotes = await page.evaluate(() => {
         const quotes: Quote[] = [];
         const quoteElements = document.querySelectorAll('.quote');
-        
+
         quoteElements.forEach(element => {
           const text = element.querySelector('.text')?.textContent?.replace(/[""]/g, '').trim() || '';
           const author = element.querySelector('.author')?.textContent?.trim() || '';
           const tagElements = element.querySelectorAll('.tag');
           const tags = Array.from(tagElements).map(tag => tag.textContent?.trim() || '');
-          
+
           // Try to get source URL (only available after login)
           const aboutLink = element.querySelector('a[href*="/author/"]')?.getAttribute('href');
           const sourceUrl = aboutLink ? `https://quotes.toscrape.com${aboutLink}` : undefined;
-          
+
           if (text && author) {
             quotes.push({ text, author, tags, sourceUrl });
           }
         });
-        
+
         return quotes;
       });
 
@@ -194,17 +194,17 @@ class ScrapingService {
 
       // Stage 5: Selected
       onProgress?.({ stage: 5, message: stages[4], totalStages: 5 });
-      
+
       // Select a random quote from newly scraped ones
       if (newQuotes.length === 0) {
         throw new Error('No quotes found on the page');
       }
-      
+
       const selectedQuote = newQuotes[Math.floor(Math.random() * newQuotes.length)];
       this.usedQuotes.add(selectedQuote.text);
-      
+
       return selectedQuote;
-      
+
     } catch (error) {
       console.error('Scraping error:', error);
       throw new Error('Failed to scrape quote');
@@ -236,13 +236,13 @@ class ScrapingService {
   async getRandomQuote(): Promise<Quote> {
     // Get from cache if available
     const availableQuotes = this.quotesCache.filter(q => !this.usedQuotes.has(q.text));
-    
+
     if (availableQuotes.length > 0) {
       const randomQuote = availableQuotes[Math.floor(Math.random() * availableQuotes.length)];
       this.usedQuotes.add(randomQuote.text);
       return randomQuote;
     }
-    
+
     // If no cached quotes available, scrape new ones
     return this.scrapeQuote();
   }

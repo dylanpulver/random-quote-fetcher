@@ -323,75 +323,97 @@ export default function Home() {
   }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, startScrapingWithSSE, startScrapingFallback])
 
   return (
-    <main className="min-h-screen p-4 sm:p-8 bg-background">
-      <div className="mx-auto w-fit max-w-7xl">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8 text-foreground">
-          Random Quote Fetcher
-        </h1>
+    <main className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50">
+      <div className="mx-auto max-w-7xl">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
+            Random Quote Fetcher
+          </h1>
+          <p className="text-slate-600 text-sm sm:text-base">
+            Navigate with arrow keys, select with X, fetch quotes with Space
+          </p>
+        </div>
 
         {error && (
-          <div className="mb-4 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700 text-sm">
-            <strong>Error:</strong> {error}
-            <button
-              onClick={() => setError(null)}
-              className="ml-2 text-red-500 hover:text-red-700"
-            >
-              ✕
-            </button>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <strong className="font-semibold">Error:</strong> {error}
+              </div>
+              <button
+                onClick={() => setError(null)}
+                className="text-red-600 hover:text-red-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
+        <div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
           {/* Left section - Actions */}
-          <div className="w-full lg:w-64 bg-card border border-border rounded-lg p-4 order-2 lg:order-1">
-            <h2 className="text-lg font-semibold mb-4 text-card-foreground">Actions</h2>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <div>
-                <span className="font-medium text-card-foreground">Arrow Keys:</span> focus cells
+          <div className="w-full xl:w-72 bg-white border border-slate-200 rounded-xl p-6 shadow-sm order-2 xl:order-1">
+            <h2 className="text-lg font-semibold mb-5 text-slate-900">Keyboard Controls</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">Arrow Keys</span>
+                <span className="text-slate-500">Navigate cells</span>
               </div>
-              <div>
-                <span className="font-medium text-card-foreground">X Key:</span> select cells
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">X</span>
+                <span className="text-slate-500">Toggle selection</span>
               </div>
-              <div>
-                <span className="font-medium text-card-foreground">Shift + Arrow Keys:</span> Bulk select cells
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">Shift + Arrows</span>
+                <span className="text-slate-500">Multi-select</span>
               </div>
-              <div>
-                <span className="font-medium text-card-foreground">Space:</span> fetch quote on focused or selected
-                cells
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">Space</span>
+                <span className="text-slate-500">Fetch quotes</span>
               </div>
-              <div>
-                <span className="font-medium text-card-foreground">Esc:</span> clear selected cells
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">Escape</span>
+                <span className="text-slate-500">Clear selection</span>
               </div>
-              <div>
-                <span className="font-medium text-card-foreground">Ctrl + A:</span> select all cells
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-700">Ctrl + A</span>
+                <span className="text-slate-500">Select all</span>
               </div>
-              <div className="mt-3 pt-2 border-t border-border">
-                <p className="text-xs">
-                  <span className="font-medium text-card-foreground">Note:</span> Real-time scraping from quotes.toscrape.com.
-                  Each fetch gets a unique quote. Loading shows actual scraping progress.
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  <span className="font-medium text-slate-700">Live scraping</span> from quotes.toscrape.com.
+                  Each fetch retrieves a unique quote with real-time progress updates.
                 </p>
               </div>
             </div>
           </div>
 
           {/* Center section - Grid */}
-          <div className="order-1 lg:order-2 flex-shrink-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[70vh] overflow-y-auto">
+          <div className="order-1 xl:order-2 flex-1">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4 gap-3 max-h-[75vh] overflow-y-auto p-1">
               {Array.from({ length: 300 }, (_, i) => (
                 <div
                   key={i}
-                  className={`w-full sm:w-48 lg:w-52 h-16 bg-card border border-border rounded-lg flex items-center justify-center text-card-foreground font-medium transition-colors ${
-                    focusedCell === i ? "ring-2 ring-primary bg-accent text-accent-foreground" : ""
-                  } ${selectedCells.has(i) ? "bg-primary text-primary-foreground" : ""}`}
+                  className={`h-16 bg-white border rounded-lg flex items-center justify-center text-slate-700 font-medium transition-all duration-200 cursor-pointer hover:shadow-sm ${
+                    focusedCell === i
+                      ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200 shadow-sm"
+                      : "border-slate-200"
+                  } ${
+                    selectedCells.has(i)
+                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                      : ""
+                  }`}
                 >
                   {loadingCells.has(i) ? (
-                    <span className="text-sm text-muted-foreground animate-pulse px-2 text-center">
+                    <span className="text-xs text-slate-500 animate-pulse px-3 text-center font-normal">
                       {loadingMessages[i] || "Loading..."}
                     </span>
                   ) : cellContent[i] ? (
-                    <span className="italic text-sm px-2 text-center">{truncateQuote(cellContent[i])}</span>
+                    <span className="italic text-xs px-3 text-center font-normal leading-tight">
+                      {truncateQuote(cellContent[i])}
+                    </span>
                   ) : (
-                    "Empty"
+                    <span className="text-slate-400 text-sm font-normal">Empty</span>
                   )}
                 </div>
               ))}
@@ -399,15 +421,15 @@ export default function Home() {
           </div>
 
           {/* Right section - Details */}
-          <div className="w-full lg:w-64 bg-white border border-border rounded-lg p-4 flex-shrink-0 order-3">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-foreground">Details</h2>
+          <div className="w-full xl:w-72 bg-white border border-slate-200 rounded-xl p-6 shadow-sm order-3">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-900">Quote Details</h2>
               {focusedCell !== null && cellContent[focusedCell]?.sourceUrl && (
                 <a
                   href={cellContent[focusedCell].sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   <svg
                     className="w-4 h-4"
@@ -427,30 +449,52 @@ export default function Home() {
             </div>
 
             {focusedCell !== null && cellContent[focusedCell] ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-foreground mb-2">Full Quote:</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{cellContent[focusedCell].text}</p>
+                  <h3 className="text-sm font-semibold text-slate-800 mb-2">Quote</h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">
+                    "{cellContent[focusedCell].text}"
+                  </p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-foreground mb-1">Author:</h3>
-                  <p className="text-sm text-muted-foreground">{cellContent[focusedCell].author}</p>
+                  <h3 className="text-sm font-semibold text-slate-800 mb-1">Author</h3>
+                  <p className="text-sm text-slate-600 font-medium">
+                    {cellContent[focusedCell].author}
+                  </p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-foreground mb-1">Tags:</h3>
-                  <div className="flex flex-wrap gap-1">
-                    {cellContent[focusedCell].tags.map((tag: string, index: number) => (
-                      <span key={index} className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-md">
-                        {tag}
-                      </span>
-                    ))}
+                {cellContent[focusedCell].tags.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800 mb-2">Tags</h3>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cellContent[focusedCell].tags.map((tag: string, index: number) => (
+                        <span
+                          key={index}
+                          className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                {focusedCell !== null ? "Cell is empty" : "Press arrow keys to start navigating"}
-              </p>
+              <div className="text-center py-8">
+                <div className="text-slate-400 text-sm">
+                  {focusedCell !== null ? (
+                    <>
+                      <div className="mb-2">📝</div>
+                      <p>This cell is empty</p>
+                      <p className="text-xs mt-1">Press Space to fetch a quote</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-2">⌨️</div>
+                      <p>Use arrow keys to navigate</p>
+                    </>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>

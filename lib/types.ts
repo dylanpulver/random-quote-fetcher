@@ -24,8 +24,10 @@ export interface ApiResponse {
   quote?: Quote;
   error?: string;
   details?: string;
+  method?: string;
   cacheInfo?: {
-    cacheSize: number;
+    puppeteerCache: number;
+    simpleCache: number;
     usedQuotes: number;
     queueLength: number;
     activeRequests: number;
