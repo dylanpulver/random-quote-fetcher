@@ -32,12 +32,28 @@ export async function POST(request: NextRequest) {
       method = 'simple';
     } else {
       try {
-        // Try Puppeteer first
-        quote = await scrapingService.getRandomQuote();
+        // Try Puppeteer first with timeout
+        const puppeteerPromise = scrapingService.getRandomQuote();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Puppeteer timeout after 90 seconds')), 90000)
+        );
+
+        quote = await Promise.race([puppeteerPromise, timeoutPromise]);
       } catch (puppeteerError) {
         console.warn('Puppeteer failed, falling back to simple scraper:', puppeteerError);
-        quote = await simpleScrapingService.getRandomQuote();
-        method = 'simple-fallback';
+        try {
+          quote = await simpleScrapingService.getRandomQuote();
+          method = 'simple-fallback';
+        } catch (fallbackError) {
+          console.error('Both scrapers failed:', fallbackError);
+          return NextResponse.json(
+            {
+              error: 'All scraping methods failed',
+              details: `Puppeteer: ${puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error'}, Simple: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`
+            },
+            { status: 500 }
+          );
+        }
       }
     }
 

@@ -31,7 +31,7 @@ class ScrapingService {
     try {
       this.browser = await puppeteer.launch({
         headless: true,
-        protocolTimeout: 60000, // 60 seconds
+        protocolTimeout: 60000, // Back to 60 seconds since no login needed
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
@@ -131,10 +131,11 @@ class ScrapingService {
       }
 
       // Need to scrape new quotes
+      const randomPage = Math.floor(Math.random() * 10) + 1;
       const stages = [
         'Starting fetch...',
-        'Logging in...',
-        `Browsing to page ${Math.floor(Math.random() * 10) + 1}...`,
+        `Browsing to page ${randomPage}...`,
+        'Loading quotes...',
         'Selecting random quote...',
         'Selected.'
       ];
@@ -143,23 +144,15 @@ class ScrapingService {
       onProgress?.({ stage: 1, message: stages[0], totalStages: 5 });
       await this.randomDelay();
 
-      // Stage 2: Logging in
+      // Stage 2: Browsing to page (no login needed!)
       onProgress?.({ stage: 2, message: stages[1], totalStages: 5 });
-      await page.goto('https://quotes.toscrape.com/login', { waitUntil: 'networkidle2' });
-
-      // Perform login
-      await page.type('#username', 'admin');
-      await page.type('#password', 'admin');
-      await page.click('input[type="submit"]');
-      await page.waitForNavigation({ waitUntil: 'networkidle2' });
-      await this.randomDelay();
-
-      // Stage 3: Browsing to page
-      const randomPage = Math.floor(Math.random() * 10) + 1;
-      onProgress?.({ stage: 3, message: `Browsing to page ${randomPage}...`, totalStages: 5 });
 
       const targetUrl = randomPage === 1 ? 'https://quotes.toscrape.com/' : `https://quotes.toscrape.com/page/${randomPage}/`;
       await page.goto(targetUrl, { waitUntil: 'networkidle2' });
+      await this.randomDelay();
+
+      // Stage 3: Loading quotes
+      onProgress?.({ stage: 3, message: stages[2], totalStages: 5 });
       await this.randomDelay();
 
       // Stage 4: Selecting quote
@@ -176,7 +169,7 @@ class ScrapingService {
           const tagElements = element.querySelectorAll('.tag');
           const tags = Array.from(tagElements).map(tag => tag.textContent?.trim() || '');
 
-          // Try to get source URL (only available after login)
+          // Get author URL (available without login)
           const aboutLink = element.querySelector('a[href*="/author/"]')?.getAttribute('href');
           const sourceUrl = aboutLink ? `https://quotes.toscrape.com${aboutLink}` : undefined;
 
@@ -214,10 +207,11 @@ class ScrapingService {
   }
 
   private async simulateLoadingStages(onProgress?: (progress: ScrapingProgress) => void) {
+    const randomPage = Math.floor(Math.random() * 10) + 1;
     const stages = [
       'Starting fetch...',
-      'Logging in...',
-      `Browsing to page ${Math.floor(Math.random() * 10) + 1}...`,
+      `Browsing to page ${randomPage}...`,
+      'Loading quotes...',
       'Selecting random quote...',
       'Selected.'
     ];

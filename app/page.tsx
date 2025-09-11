@@ -13,6 +13,7 @@ export default function Home() {
   const [focusedCell, setFocusedCell] = useState<number | null>(null)
   const [selectedCells, setSelectedCells] = useState<Set<number>>(new Set())
   const [selectionStart, setSelectionStart] = useState<number | null>(null)
+  const [selectionPath, setSelectionPath] = useState<number[]>([])
   const [cellContent, setCellContent] = useState<{ [key: number]: Quote }>({})
   const [loadingCells, setLoadingCells] = useState<Set<number>>(new Set())
   const [loadingMessages, setLoadingMessages] = useState<{ [key: number]: string }>({})
@@ -201,12 +202,6 @@ export default function Home() {
       const currentRow = Math.floor(focusedCell / 3)
       const currentCol = focusedCell % 3
 
-      const selectPath = (start: number, end: number) => {
-        const newSet = new Set(selectedCells)
-        newSet.add(end)
-        setSelectedCells(newSet)
-      }
-
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault()
@@ -216,27 +211,35 @@ export default function Home() {
             if (e.shiftKey) {
               if (selectionStart === null) {
                 setSelectionStart(focusedCell)
+                setSelectionPath([focusedCell])
                 setSelectedCells(new Set([focusedCell]))
               }
-              selectPath(selectionStart!, newFocus)
+              setSelectionPath((prev) => [...prev, newFocus])
+              setSelectedCells((prev) => new Set([...prev, newFocus]))
             } else {
               setSelectionStart(null)
+              setSelectionPath([])
+              setSelectedCells(new Set())
             }
           }
           break
         case "ArrowDown":
           e.preventDefault()
-          if (currentRow < 99) {
+          if (currentRow < 99) { // 100 rows total (0-99)
             const newFocus = focusedCell + 3
             setFocusedCell(newFocus)
             if (e.shiftKey) {
               if (selectionStart === null) {
                 setSelectionStart(focusedCell)
+                setSelectionPath([focusedCell])
                 setSelectedCells(new Set([focusedCell]))
               }
-              selectPath(selectionStart!, newFocus)
+              setSelectionPath((prev) => [...prev, newFocus])
+              setSelectedCells((prev) => new Set([...prev, newFocus]))
             } else {
               setSelectionStart(null)
+              setSelectionPath([])
+              setSelectedCells(new Set())
             }
           }
           break
@@ -248,11 +251,15 @@ export default function Home() {
             if (e.shiftKey) {
               if (selectionStart === null) {
                 setSelectionStart(focusedCell)
+                setSelectionPath([focusedCell])
                 setSelectedCells(new Set([focusedCell]))
               }
-              selectPath(selectionStart!, newFocus)
+              setSelectionPath((prev) => [...prev, newFocus])
+              setSelectedCells((prev) => new Set([...prev, newFocus]))
             } else {
               setSelectionStart(null)
+              setSelectionPath([])
+              setSelectedCells(new Set())
             }
           }
           break
@@ -264,11 +271,15 @@ export default function Home() {
             if (e.shiftKey) {
               if (selectionStart === null) {
                 setSelectionStart(focusedCell)
+                setSelectionPath([focusedCell])
                 setSelectedCells(new Set([focusedCell]))
               }
-              selectPath(selectionStart!, newFocus)
+              setSelectionPath((prev) => [...prev, newFocus])
+              setSelectedCells((prev) => new Set([...prev, newFocus]))
             } else {
               setSelectionStart(null)
+              setSelectionPath([])
+              setSelectedCells(new Set())
             }
           }
           break
@@ -285,6 +296,7 @@ export default function Home() {
             return newSet
           })
           setSelectionStart(null)
+          setSelectionPath([])
           break
         case " ":
           e.preventDefault()
@@ -304,6 +316,7 @@ export default function Home() {
           e.preventDefault()
           setSelectedCells(new Set())
           setSelectionStart(null)
+          setSelectionPath([])
           setError(null)
           break
         case "a":
@@ -313,6 +326,7 @@ export default function Home() {
             const allCells = new Set(Array.from({ length: 300 }, (_, i) => i))
             setSelectedCells(allCells)
             setSelectionStart(null)
+            setSelectionPath([])
           }
           break
       }
@@ -320,7 +334,7 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, startScrapingWithSSE, startScrapingFallback])
+  }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, selectionPath, startScrapingWithSSE, startScrapingFallback])
 
   return (
     <main className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50">
@@ -388,35 +402,44 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Center section - Grid */}
-          <div className="order-1 xl:order-2 flex-1">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4 gap-3 max-h-[75vh] overflow-y-auto p-1">
-              {Array.from({ length: 300 }, (_, i) => (
-                <div
-                  key={i}
-                  className={`h-16 bg-white border rounded-lg flex items-center justify-center text-slate-700 font-medium transition-all duration-200 cursor-pointer hover:shadow-sm ${
-                    focusedCell === i
-                      ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200 shadow-sm"
-                      : "border-slate-200"
-                  } ${
-                    selectedCells.has(i)
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : ""
-                  }`}
-                >
-                  {loadingCells.has(i) ? (
-                    <span className="text-xs text-slate-500 animate-pulse px-3 text-center font-normal">
-                      {loadingMessages[i] || "Loading..."}
-                    </span>
-                  ) : cellContent[i] ? (
-                    <span className="italic text-xs px-3 text-center font-normal leading-tight">
-                      {truncateQuote(cellContent[i])}
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 text-sm font-normal">Empty</span>
-                  )}
-                </div>
-              ))}
+          {/* Center section - Grid - FIXED TO 3 COLUMNS */}
+          <div className="order-1 xl:order-2 flex-1 flex justify-center overflow-hidden">
+            <div className="max-h-[75vh] overflow-y-auto w-fit">
+              <div className="grid grid-cols-3 gap-4 p-4">
+                {Array.from({ length: 300 }, (_, i) => {
+                  const isSelected = selectedCells.has(i)
+                  const isFocused = focusedCell === i
+                  const isLoading = loadingCells.has(i)
+                  const hasContent = cellContent[i]
+
+                  return (
+                    <div
+                      key={i}
+                      className={`w-52 h-16 border rounded-lg flex items-center justify-center text-slate-700 font-medium transition-all duration-200 cursor-pointer hover:shadow-sm ${
+                        isFocused && !isSelected
+                          ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200 shadow-sm"
+                          : ""
+                      } ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-400"
+                          : "bg-white border-slate-200"
+                      }`}
+                    >
+                      {isLoading ? (
+                        <span className="text-xs animate-pulse px-3 text-center font-normal text-slate-500">
+                          {loadingMessages[i] || "Loading..."}
+                        </span>
+                      ) : hasContent ? (
+                        <span className="italic text-xs px-3 text-center font-normal leading-tight">
+                          {truncateQuote(hasContent)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm font-normal">Empty</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
@@ -494,6 +517,15 @@ export default function Home() {
                     </>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Selection info */}
+            {selectedCells.size > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-xs text-slate-500">
+                  <span className="font-medium text-slate-700">{selectedCells.size}</span> cells selected
+                </p>
               </div>
             )}
           </div>
