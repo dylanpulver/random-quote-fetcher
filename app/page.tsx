@@ -404,8 +404,8 @@ export default function Home() {
 
           {/* Center section - Grid - FIXED TO 3 COLUMNS */}
           <div className="order-1 xl:order-2 flex-1 flex justify-center overflow-hidden">
-            <div className="max-h-[75vh] overflow-y-auto w-fit">
-              <div className="grid grid-cols-3 gap-4 p-4">
+            <div className="max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-3 gap-3 p-4 w-fit mx-auto">
                 {Array.from({ length: 300 }, (_, i) => {
                   const isSelected = selectedCells.has(i)
                   const isFocused = focusedCell === i
@@ -415,26 +415,34 @@ export default function Home() {
                   return (
                     <div
                       key={i}
-                      className={`w-52 h-16 border rounded-lg flex items-center justify-center text-slate-700 font-medium transition-all duration-200 cursor-pointer hover:shadow-sm ${
+                      className={`w-48 h-20 border-2 rounded-xl flex items-center justify-center font-medium transition-all duration-200 cursor-pointer hover:shadow-md hover:border-slate-300 ${
                         isFocused && !isSelected
-                          ? "ring-2 ring-blue-500 bg-blue-50 border-blue-200 shadow-sm"
+                          ? "ring-2 ring-blue-500 bg-blue-50 border-blue-300 shadow-md"
                           : ""
                       } ${
                         isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-400"
+                          ? "bg-blue-500 text-white border-blue-500 shadow-lg ring-2 ring-blue-300"
                           : "bg-white border-slate-200"
                       }`}
                     >
                       {isLoading ? (
-                        <span className="text-xs animate-pulse px-3 text-center font-normal text-slate-500">
+                        <span className={`text-xs animate-pulse px-3 text-center font-normal ${
+                          isSelected ? "text-blue-100" : "text-slate-500"
+                        }`}>
                           {loadingMessages[i] || "Loading..."}
                         </span>
                       ) : hasContent ? (
-                        <span className="italic text-xs px-3 text-center font-normal leading-tight">
+                        <span className={`italic text-xs px-3 text-center font-normal leading-tight ${
+                          isSelected ? "text-white" : "text-slate-700"
+                        }`}>
                           {truncateQuote(hasContent)}
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-sm font-normal">Empty</span>
+                        <span className={`text-sm font-normal ${
+                          isSelected ? "text-blue-100" : "text-slate-400"
+                        }`}>
+                          Empty
+                        </span>
                       )}
                     </div>
                   )
