@@ -6,5 +6,10 @@
     "app/api/scrape-status/route.ts": {
       "maxDuration": 30
     }
+  },
+  "build": {
+    "env": {
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+    }
   }
 }
