@@ -19,6 +19,25 @@ export default function Home() {
   const [loadingMessages, setLoadingMessages] = useState<{ [key: number]: string }>({})
   const [error, setError] = useState<string | null>(null)
 
+  // Get current number of columns based on screen size
+  const getColumns = () => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth >= 768) return 3 // md and up - 3 columns
+      if (window.innerWidth >= 480) return 2 // sm to md - 2 columns
+      return 2 // xs - 2 columns (but smaller cells)
+    }
+    return 3 // default for SSR
+  }
+
+  const [columns, setColumns] = useState(3)
+
+  useEffect(() => {
+    const updateColumns = () => setColumns(getColumns())
+    updateColumns()
+    window.addEventListener('resize', updateColumns)
+    return () => window.removeEventListener('resize', updateColumns)
+  }, [])
+
   const truncateQuote = (quote: Quote) => {
     const words = quote.text.split(" ")
     const firstWords = words.slice(0, Math.min(5, Math.max(3, words.length)))
@@ -199,14 +218,14 @@ export default function Home() {
         return
       }
 
-      const currentRow = Math.floor(focusedCell / 3)
-      const currentCol = focusedCell % 3
+      const currentRow = Math.floor(focusedCell / columns)
+      const currentCol = focusedCell % columns
 
       switch (e.key) {
         case "ArrowUp":
           e.preventDefault()
           if (currentRow > 0) {
-            const newFocus = focusedCell - 3
+            const newFocus = focusedCell - columns
             setFocusedCell(newFocus)
             if (e.shiftKey) {
               if (selectionStart === null) {
@@ -225,8 +244,9 @@ export default function Home() {
           break
         case "ArrowDown":
           e.preventDefault()
-          if (currentRow < 99) { // 100 rows total (0-99)
-            const newFocus = focusedCell + 3
+          const maxRow = Math.floor(299 / columns) // 300 cells, 0-indexed
+          if (currentRow < maxRow) {
+            const newFocus = Math.min(focusedCell + columns, 299)
             setFocusedCell(newFocus)
             if (e.shiftKey) {
               if (selectionStart === null) {
@@ -265,7 +285,7 @@ export default function Home() {
           break
         case "ArrowRight":
           e.preventDefault()
-          if (currentCol < 2) {
+          if (currentCol < columns - 1) {
             const newFocus = focusedCell + 1
             setFocusedCell(newFocus)
             if (e.shiftKey) {
@@ -334,12 +354,12 @@ export default function Home() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, selectionPath, startScrapingWithSSE, startScrapingFallback])
+  }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, selectionPath, startScrapingWithSSE, startScrapingFallback, columns])
 
   return (
     <main className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50">
       <div className="mx-auto max-w-7xl">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 md:mb-12">
           <div className="relative">
             {/* Background decoration */}
             <div className="absolute inset-0 -top-4 -bottom-4">
@@ -347,26 +367,26 @@ export default function Home() {
             </div>
 
             {/* Main content */}
-            <div className="relative py-8 px-6">
+            <div className="relative py-6 md:py-8 px-4 md:px-6">
               {/* Title with inline icon */}
-              <div className="flex items-center justify-center gap-4 mb-3">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-3">
                 <img
                   src="/images/quote-logo.png"
                   alt="Quote Fetcher Logo"
-                  className="w-14 h-14 object-contain"
+                  className="w-12 h-12 md:w-14 md:h-14 object-contain"
                 />
-                <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
+                <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent text-center sm:text-left">
                   Random Quote Fetcher
                 </h1>
               </div>
 
               {/* Subtitle */}
-              <p className="text-lg text-slate-600 mb-6 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-base md:text-lg text-slate-600 mb-6 max-w-2xl mx-auto leading-relaxed px-4">
                 Discover inspiring quotes with an interactive grid interface
               </p>
 
-              {/* Controls hint */}
-              <div className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-2xl px-6 py-3 shadow-sm">
+              {/* Controls hint - hide on very small screens, show simplified version on mobile */}
+              <div className="hidden sm:inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-2xl px-6 py-3 shadow-sm">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
                     <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">↑</div>
@@ -391,6 +411,11 @@ export default function Home() {
                   <span className="text-sm text-slate-600">Fetch</span>
                 </div>
               </div>
+
+              {/* Mobile-friendly hint */}
+              <div className="sm:hidden text-xs text-slate-500 bg-white/60 backdrop-blur-sm border border-slate-200/50 rounded-xl px-4 py-2 max-w-xs mx-auto">
+                Best experienced with a keyboard on desktop
+              </div>
             </div>
           </div>
         </div>
@@ -411,11 +436,11 @@ export default function Home() {
           </div>
         )}
 
-        <div className="flex flex-col xl:flex-row gap-6 lg:gap-8">
-          {/* Left section - Actions */}
-          <div className="w-full xl:w-72 bg-white border border-slate-200 rounded-xl p-6 shadow-sm order-2 xl:order-1">
-            <h2 className="text-lg font-semibold mb-5 text-slate-900">Keyboard Controls</h2>
-            <div className="space-y-3 text-sm">
+        <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8">
+          {/* Left section - Actions - Hide on mobile, collapse on tablet */}
+          <div className="hidden md:block w-full lg:w-72 bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm order-2 lg:order-1">
+            <h2 className="text-base md:text-lg font-semibold mb-4 md:mb-5 text-slate-900">Keyboard Controls</h2>
+            <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
               <div className="flex justify-between items-center">
                 <span className="font-medium text-slate-700">Arrow Keys</span>
                 <span className="text-slate-500">Navigate cells</span>
@@ -440,7 +465,7 @@ export default function Home() {
                 <span className="font-medium text-slate-700">Ctrl + A</span>
                 <span className="text-slate-500">Select all</span>
               </div>
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-200">
                 <p className="text-xs text-slate-500 leading-relaxed">
                   <span className="font-medium text-slate-700">Live scraping</span> from quotes.toscrape.com.
                   Each fetch retrieves a unique quote with real-time progress updates.
@@ -449,59 +474,72 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Center section - Grid - FIXED TO 3 COLUMNS */}
-          <div className="order-1 xl:order-2 flex-1 flex justify-center overflow-hidden">
-            <div className="max-h-[75vh] overflow-y-auto">
-              <div className="grid grid-cols-3 gap-3 p-4 w-fit mx-auto">
-                {Array.from({ length: 300 }, (_, i) => {
-                  const isSelected = selectedCells.has(i)
-                  const isFocused = focusedCell === i
-                  const isLoading = loadingCells.has(i)
-                  const hasContent = cellContent[i]
+          {/* Center section - Grid */}
+          <div className="order-1 lg:order-2 flex-1 flex justify-center overflow-hidden">
+            <div className="max-h-[60vh] md:max-h-[70vh] lg:max-h-[75vh] overflow-y-auto w-full">
+              {/* Responsive grid container - takes up available width */}
+              <div className="p-2 sm:p-4 max-w-none">
+                <div className={`grid gap-2 sm:gap-3 mx-auto w-fit max-w-full ${
+                  columns === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                }`} style={{
+                  gridTemplateColumns: columns === 2
+                    ? 'repeat(2, minmax(120px, 1fr))'
+                    : 'repeat(3, minmax(140px, 1fr))'
+                }}>
+                  {Array.from({ length: 300 }, (_, i) => {
+                    const isSelected = selectedCells.has(i)
+                    const isFocused = focusedCell === i
+                    const isLoading = loadingCells.has(i)
+                    const hasContent = cellContent[i]
 
-                  return (
-                    <div
-                      key={i}
-                      className={`w-48 h-20 border-2 rounded-xl flex items-center justify-center font-medium transition-all duration-200 cursor-pointer hover:shadow-md hover:border-slate-300 ${
-                        isFocused && !isSelected
-                          ? "ring-2 ring-blue-500 bg-blue-50 border-blue-300 shadow-md"
-                          : ""
-                      } ${
-                        isSelected
-                          ? "bg-blue-500 text-white border-blue-500 shadow-lg ring-2 ring-blue-300"
-                          : "bg-white border-slate-200"
-                      }`}
-                    >
-                      {isLoading ? (
-                        <span className={`text-xs animate-pulse px-3 text-center font-normal ${
-                          isSelected ? "text-blue-100" : "text-slate-500"
-                        }`}>
-                          {loadingMessages[i] || "Loading..."}
-                        </span>
-                      ) : hasContent ? (
-                        <span className={`italic text-xs px-3 text-center font-normal leading-tight ${
-                          isSelected ? "text-white" : "text-slate-700"
-                        }`}>
-                          {truncateQuote(hasContent)}
-                        </span>
-                      ) : (
-                        <span className={`text-sm font-normal ${
-                          isSelected ? "text-blue-100" : "text-slate-400"
-                        }`}>
-                          Empty
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
+                    return (
+                      <div
+                        key={i}
+                        className={`
+                          min-h-[64px] aspect-[2.5/1] max-w-[200px]
+                          border-2 rounded-lg md:rounded-xl flex items-center justify-center font-medium
+                          transition-all duration-200 cursor-pointer hover:shadow-md hover:border-slate-300
+                          ${isFocused && !isSelected
+                            ? "ring-2 ring-blue-500 bg-blue-50 border-blue-300 shadow-md"
+                            : ""
+                          }
+                          ${isSelected
+                            ? "bg-blue-500 text-white border-blue-500 shadow-lg ring-2 ring-blue-300"
+                            : "bg-white border-slate-200"
+                          }
+                        `}
+                      >
+                        {isLoading ? (
+                          <span className={`text-xs animate-pulse px-2 text-center font-normal ${
+                            isSelected ? "text-blue-100" : "text-slate-500"
+                          }`}>
+                            {loadingMessages[i] || "Loading..."}
+                          </span>
+                        ) : hasContent ? (
+                          <span className={`italic text-xs px-2 text-center font-normal leading-tight ${
+                            isSelected ? "text-white" : "text-slate-700"
+                          }`}>
+                            {truncateQuote(hasContent)}
+                          </span>
+                        ) : (
+                          <span className={`text-xs font-normal ${
+                            isSelected ? "text-blue-100" : "text-slate-400"
+                          }`}>
+                            Empty
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Right section - Details */}
-          <div className="w-full xl:w-72 bg-white border border-slate-200 rounded-xl p-6 shadow-sm order-3">
+          <div className="w-full lg:w-72 bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm order-3">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900">Quote Details</h2>
+              <h2 className="text-base md:text-lg font-semibold text-slate-900">Quote Details</h2>
               {focusedCell !== null && cellContent[focusedCell]?.sourceUrl && (
                 <a
                   href={cellContent[focusedCell].sourceUrl}
@@ -527,27 +565,27 @@ export default function Home() {
             </div>
 
             {focusedCell !== null && cellContent[focusedCell] ? (
-              <div className="space-y-4">
+              <div className="space-y-3 md:space-y-4">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-800 mb-2">Quote</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">
+                  <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
                     &ldquo;{cellContent[focusedCell].text}&rdquo;
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-slate-800 mb-1">Author</h3>
-                  <p className="text-sm text-slate-600 font-medium">
+                  <p className="text-xs md:text-sm text-slate-600 font-medium">
                     {cellContent[focusedCell].author}
                   </p>
                 </div>
                 {cellContent[focusedCell].tags.length > 0 && (
                   <div>
                     <h3 className="text-sm font-semibold text-slate-800 mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-1 md:gap-1.5">
                       {cellContent[focusedCell].tags.map((tag: string, index: number) => (
                         <span
                           key={index}
-                          className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium"
+                          className="px-2 md:px-2.5 py-1 bg-slate-100 text-slate-600 text-xs rounded-full font-medium"
                         >
                           {tag}
                         </span>
@@ -557,18 +595,22 @@ export default function Home() {
                 )}
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-6 md:py-8">
                 <div className="text-slate-400 text-sm">
                   {focusedCell !== null ? (
                     <>
                       <div className="mb-2">📝</div>
                       <p>This cell is empty</p>
-                      <p className="text-xs mt-1">Press Space to fetch a quote</p>
+                      <p className="text-xs mt-1">
+                        <span className="hidden sm:inline">Press Space to fetch a quote</span>
+                        <span className="sm:hidden">Tap to select, then use keyboard</span>
+                      </p>
                     </>
                   ) : (
                     <>
                       <div className="mb-2">⌨️</div>
-                      <p>Use arrow keys to navigate</p>
+                      <p className="hidden sm:block">Use arrow keys to navigate</p>
+                      <p className="sm:hidden">Tap cells to view quotes</p>
                     </>
                   )}
                 </div>
@@ -577,19 +619,26 @@ export default function Home() {
 
             {/* Selection info */}
             {selectedCells.size > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-200">
                 <p className="text-xs text-slate-500">
                   <span className="font-medium text-slate-700">{selectedCells.size}</span> cells selected
                 </p>
               </div>
             )}
+
+            {/* Mobile controls hint */}
+            <div className="md:hidden mt-4 pt-4 border-t border-slate-200">
+              <p className="text-xs text-slate-500 leading-relaxed text-center">
+                💡 This app works best with keyboard navigation on desktop or tablet devices
+              </p>
+            </div>
           </div>
         </div>
 
         {/* Simple Footer */}
-        <footer className="mt-16 pt-8 border-t border-slate-200">
+        <footer className="mt-12 md:mt-16 pt-6 md:pt-8 border-t border-slate-200">
           <div className="text-center">
-            <p className="text-sm text-slate-500">
+            <p className="text-xs md:text-sm text-slate-500 px-4">
               Built with ❤️ using Next.js • Data from{' '}
               <a
                 href="https://quotes.toscrape.com"
