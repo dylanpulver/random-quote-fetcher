@@ -339,13 +339,60 @@ export default function Home() {
   return (
     <main className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50">
       <div className="mx-auto max-w-7xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
-            Random Quote Fetcher
-          </h1>
-          <p className="text-slate-600 text-sm sm:text-base">
-            Navigate with arrow keys, select with X, fetch quotes with Space
-          </p>
+        <div className="text-center mb-12">
+          <div className="relative">
+            {/* Background decoration */}
+            <div className="absolute inset-0 -top-4 -bottom-4">
+              <div className="w-full h-full bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-3xl opacity-60"></div>
+            </div>
+
+            {/* Main content */}
+            <div className="relative py-8 px-6">
+              {/* Title with inline icon */}
+              <div className="flex items-center justify-center gap-4 mb-3">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
+                  Random Quote Fetcher
+                </h1>
+              </div>
+
+              {/* Subtitle */}
+              <p className="text-lg text-slate-600 mb-6 max-w-2xl mx-auto leading-relaxed">
+                Discover inspiring quotes with an interactive grid interface
+              </p>
+
+              {/* Controls hint */}
+              <div className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-2xl px-6 py-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">↑</div>
+                    <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">↓</div>
+                    <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">←</div>
+                    <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">→</div>
+                  </div>
+                  <span className="text-sm text-slate-600">Navigate</span>
+                </div>
+
+                <div className="w-px h-4 bg-slate-300"></div>
+
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">X</div>
+                  <span className="text-sm text-slate-600">Select</span>
+                </div>
+
+                <div className="w-px h-4 bg-slate-300"></div>
+
+                <div className="flex items-center gap-2">
+                  <div className="px-2 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">Space</div>
+                  <span className="text-sm text-slate-600">Fetch</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {error && (
