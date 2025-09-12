@@ -1,5 +1,5 @@
 import chromium from '@sparticuz/chromium';
-import { Browser } from 'puppeteer-core';
+import { Browser, Page } from 'puppeteer-core';
 
 export interface Quote {
   text: string;
@@ -16,8 +16,8 @@ export interface ScrapingProgress {
 
 class ScrapingService {
   private browser: Browser | null = null;
-  private pages: any[] = [];
-  private pagePool: any[] = [];
+  private pages: Page[] = [];
+  private pagePool: Page[] = [];
   private quotesCache: Quote[] = [];
   private usedQuotes: Set<string> = new Set();
   private isInitialized = false;
@@ -45,17 +45,18 @@ class ScrapingService {
         console.log('Using @sparticuz/chromium for serverless environment');
         // Use @sparticuz/chromium for production Linux environments
         const puppeteerCore = await import('puppeteer-core');
-        this.browser = await puppeteerCore.default.launch({
+        const browser = await puppeteerCore.default.launch({
           args: chromium.args,
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
           headless: chromium.headless,
-        }) as Browser;
+        });
+        this.browser = browser as Browser;
       } else {
         console.log('Using regular puppeteer for local development');
         // Use regular puppeteer for local development (macOS/Windows)
         const puppeteerRegular = await import('puppeteer');
-        this.browser = await puppeteerRegular.default.launch({
+        const browser = await puppeteerRegular.default.launch({
           headless: true,
           args: [
             '--no-sandbox',
@@ -68,7 +69,8 @@ class ScrapingService {
             '--disable-web-security',
             '--disable-features=VizDisplayCompositor'
           ]
-        }) as Browser;
+        });
+        this.browser = browser as Browser;
       }
 
       // Create page pool
@@ -77,7 +79,7 @@ class ScrapingService {
         await page.setUserAgent(
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         );
-        this.pagePool.push(page);
+        this.pagePool.push(page as Page);
       }
 
       this.isInitialized = true;
@@ -88,7 +90,7 @@ class ScrapingService {
     }
   }
 
-  private async getPage(): Promise<any> {
+  private async getPage(): Promise<Page> {
     if (this.pagePool.length > 0) {
       return this.pagePool.pop()!;
     }
@@ -98,7 +100,7 @@ class ScrapingService {
     return this.getPage();
   }
 
-  private returnPage(page: any) {
+  private returnPage(page: Page) {
     this.pagePool.push(page);
   }
 
