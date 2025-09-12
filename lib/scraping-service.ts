@@ -1,5 +1,5 @@
 import chromium from '@sparticuz/chromium';
-import { Browser, Page } from 'puppeteer-core';
+import { Browser } from 'puppeteer-core';
 
 export interface Quote {
   text: string;
@@ -16,8 +16,8 @@ export interface ScrapingProgress {
 
 class ScrapingService {
   private browser: Browser | null = null;
-  private pages: Page[] = [];
-  private pagePool: Page[] = [];
+  private pages: any[] = [];
+  private pagePool: any[] = [];
   private quotesCache: Quote[] = [];
   private usedQuotes: Set<string> = new Set();
   private isInitialized = false;
@@ -50,7 +50,7 @@ class ScrapingService {
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
           headless: chromium.headless,
-        });
+        }) as Browser;
       } else {
         console.log('Using regular puppeteer for local development');
         // Use regular puppeteer for local development (macOS/Windows)
@@ -68,7 +68,7 @@ class ScrapingService {
             '--disable-web-security',
             '--disable-features=VizDisplayCompositor'
           ]
-        });
+        }) as Browser;
       }
 
       // Create page pool
@@ -88,7 +88,7 @@ class ScrapingService {
     }
   }
 
-  private async getPage(): Promise<Page> {
+  private async getPage(): Promise<any> {
     if (this.pagePool.length > 0) {
       return this.pagePool.pop()!;
     }
@@ -98,7 +98,7 @@ class ScrapingService {
     return this.getPage();
   }
 
-  private returnPage(page: Page) {
+  private returnPage(page: any) {
     this.pagePool.push(page);
   }
 
