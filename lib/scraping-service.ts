@@ -50,7 +50,6 @@ class ScrapingService {
           defaultViewport: chromium.defaultViewport,
           executablePath: await chromium.executablePath(),
           headless: chromium.headless,
-          ignoreHTTPSErrors: true,
         });
       } else {
         console.log('Using regular puppeteer for local development');
