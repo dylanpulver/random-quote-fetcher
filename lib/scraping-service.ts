@@ -45,23 +45,25 @@ class ScrapingService {
         console.log('Using @sparticuz/chromium for serverless environment');
         // Use @sparticuz/chromium for production Linux environments
         const puppeteerCore = await import('puppeteer-core');
+
+        // Define custom viewport as required by new API
+        const viewport = {
+          deviceScaleFactor: 1,
+          hasTouch: false,
+          height: 1080,
+          isLandscape: true,
+          isMobile: false,
+          width: 1920,
+        };
+
         const browser = await puppeteerCore.default.launch({
-          args: [
-            ...chromium.args,
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-renderer-backgrounding',
-            '--disable-features=TranslateUI',
-            '--disable-ipc-flooding-protection'
-          ],
-          defaultViewport: chromium.defaultViewport,
+          args: puppeteerCore.default.defaultArgs({
+            args: chromium.args,
+            headless: "shell"
+          }),
+          defaultViewport: viewport,
           executablePath: await chromium.executablePath(),
-          headless: chromium.headless,
+          headless: "shell",
         });
         this.browser = browser as unknown as Browser;
       } else {
