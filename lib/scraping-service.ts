@@ -1,4 +1,5 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import chromium from '@sparticuz/chromium';
+import { Browser, Page } from 'puppeteer-core';
 
 export interface Quote {
   text: string;
@@ -29,21 +30,47 @@ class ScrapingService {
     if (this.isInitialized) return;
 
     try {
-      this.browser = await puppeteer.launch({
-        headless: true,
-        protocolTimeout: 60000, // Back to 60 seconds since no login needed
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor'
-        ]
+      // Check if we're running on Vercel/Linux or local development
+      const isVercel = process.env.VERCEL === '1';
+      const isLinux = process.platform === 'linux';
+
+      console.log('Environment check:', {
+        isVercel,
+        isLinux,
+        platform: process.platform,
+        nodeEnv: process.env.NODE_ENV
       });
+
+      if (isVercel || (process.env.NODE_ENV === 'production' && isLinux)) {
+        console.log('Using @sparticuz/chromium for serverless environment');
+        // Use @sparticuz/chromium for production Linux environments
+        const puppeteerCore = await import('puppeteer-core');
+        this.browser = await puppeteerCore.default.launch({
+          args: chromium.args,
+          defaultViewport: chromium.defaultViewport,
+          executablePath: await chromium.executablePath(),
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        });
+      } else {
+        console.log('Using regular puppeteer for local development');
+        // Use regular puppeteer for local development (macOS/Windows)
+        const puppeteerRegular = await import('puppeteer');
+        this.browser = await puppeteerRegular.default.launch({
+          headless: true,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
+          ]
+        });
+      }
 
       // Create page pool
       for (let i = 0; i < this.MAX_PAGES; i++) {
@@ -55,6 +82,7 @@ class ScrapingService {
       }
 
       this.isInitialized = true;
+      console.log('Puppeteer initialized successfully');
     } catch (error) {
       console.error('Failed to initialize scraping service:', error);
       throw error;
@@ -144,7 +172,7 @@ class ScrapingService {
       onProgress?.({ stage: 1, message: stages[0], totalStages: 5 });
       await this.randomDelay();
 
-      // Stage 2: Browsing to page (no login needed!)
+      // Stage 2: Browsing to page
       onProgress?.({ stage: 2, message: stages[1], totalStages: 5 });
 
       const targetUrl = randomPage === 1 ? 'https://quotes.toscrape.com/' : `https://quotes.toscrape.com/page/${randomPage}/`;
