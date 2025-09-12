@@ -51,7 +51,7 @@ class ScrapingService {
           executablePath: await chromium.executablePath(),
           headless: chromium.headless,
         });
-        this.browser = browser as Browser;
+        this.browser = browser as unknown as Browser;
       } else {
         console.log('Using regular puppeteer for local development');
         // Use regular puppeteer for local development (macOS/Windows)
@@ -70,7 +70,7 @@ class ScrapingService {
             '--disable-features=VizDisplayCompositor'
           ]
         });
-        this.browser = browser as Browser;
+        this.browser = browser as unknown as Browser;
       }
 
       // Create page pool
