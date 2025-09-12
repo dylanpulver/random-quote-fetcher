@@ -585,6 +585,23 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* Simple Footer */}
+        <footer className="mt-16 pt-8 border-t border-slate-200">
+          <div className="text-center">
+            <p className="text-sm text-slate-500">
+              Built with ❤️ using Next.js • Data from{' '}
+              <a
+                href="https://quotes.toscrape.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-600 hover:text-slate-800 transition-colors underline"
+              >
+                quotes.toscrape.com
+              </a>
+            </p>
+          </div>
+        </footer>
       </div>
     </main>
   )
