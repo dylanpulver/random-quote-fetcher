@@ -71,6 +71,27 @@ export default function Home() {
     return `"${firstWords.join(" ")}..."`
   }, []);
 
+  // Handle cell click
+  const handleCellClick = useCallback((cellIndex: number) => {
+    // Set focus to clicked cell
+    setFocusedCell(cellIndex)
+
+    // Toggle selection
+    setSelectedCells((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(cellIndex)) {
+        newSet.delete(cellIndex)
+      } else {
+        newSet.add(cellIndex)
+      }
+      return newSet
+    })
+
+    // Clear selection path since we're using mouse
+    setSelectionStart(null)
+    setSelectionPath([])
+  }, [])
+
   // Enhanced request tracking
   const updatePerformanceMetrics = useCallback((success: boolean, responseTime: number) => {
     setPerformanceMetrics(prev => ({
@@ -516,6 +537,7 @@ export default function Home() {
       return (
         <div
           key={i}
+          onClick={() => handleCellClick(i)}
           className={`
             min-h-[64px] aspect-[2.5/1] max-w-[200px]
             border-2 rounded-lg md:rounded-xl flex items-center justify-center font-medium
@@ -552,7 +574,7 @@ export default function Home() {
         </div>
       )
     });
-  }, [selectedCells, focusedCell, loadingCells, cellContent, loadingMessages, truncateQuote]);
+  }, [selectedCells, focusedCell, loadingCells, cellContent, loadingMessages, truncateQuote, handleCellClick]);
 
   return (
     <ErrorBoundary>
@@ -628,7 +650,7 @@ export default function Home() {
                 </div>
 
                 <div className="sm:hidden text-xs text-slate-500 bg-white/60 backdrop-blur-sm border border-slate-200/50 rounded-xl px-4 py-2 max-w-xs mx-auto">
-                  Best experienced with a keyboard on desktop
+                  Click cells to select • Use Space to fetch quotes
                 </div>
               </div>
             </div>
@@ -662,19 +684,23 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8">
             {/* Left section - Actions */}
             <div className="hidden md:block w-full lg:w-72 bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm order-2 lg:order-1">
-              <h2 className="text-base md:text-lg font-semibold mb-4 md:mb-5 text-slate-900">Keyboard Controls</h2>
+              <h2 className="text-base md:text-lg font-semibold mb-4 md:mb-5 text-slate-900">Controls</h2>
               <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-slate-700">Click Cell</span>
+                  <span className="text-slate-500">Select/Focus</span>
+                </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">Arrow Keys</span>
                   <span className="text-slate-500">Navigate cells</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">X</span>
-                  <span className="text-slate-500">Toggle selection</span>
+                  <span className="text-slate-500">Toggle current cell</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">Shift + Arrows</span>
-                  <span className="text-slate-500">Multi-select</span>
+                  <span className="text-slate-500">Range select</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">Space</span>
@@ -810,15 +836,13 @@ export default function Home() {
                         <div className="mb-2">📝</div>
                         <p>This cell is empty</p>
                         <p className="text-xs mt-1">
-                          <span className="hidden sm:inline">Press Space to fetch a quote</span>
-                          <span className="sm:hidden">Tap to select, then use keyboard</span>
+                          Press Space to fetch a quote
                         </p>
                       </>
                     ) : (
                       <>
                         <div className="mb-2">⌨️</div>
-                        <p className="hidden sm:block">Use arrow keys to navigate</p>
-                        <p className="sm:hidden">Tap cells to view quotes</p>
+                        <p>Click a cell to select and view details</p>
                       </>
                     )}
                   </div>
@@ -842,7 +866,7 @@ export default function Home() {
               {/* Mobile controls hint */}
               <div className="md:hidden mt-4 pt-4 border-t border-slate-200">
                 <p className="text-xs text-slate-500 leading-relaxed text-center">
-                  💡 This app works best with keyboard navigation on desktop or tablet devices
+                  💡 Click cells to select • Use Space to fetch quotes
                 </p>
               </div>
             </div>
