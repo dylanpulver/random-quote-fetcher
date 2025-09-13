@@ -263,34 +263,34 @@ export default function Home() {
 
     const messages = [
       "Starting fetch...",
-      "Logging in...",
+      "Connecting...",
       `Browsing to page ${Math.floor(Math.random() * 10) + 1}...`,
+      "Loading quotes...",
       "Selecting random quote...",
-      "Selected.",
+      "Selected."
     ]
 
     try {
-      // Simulate loading stages with better error handling
+      // Simulate loading stages
       for (let i = 0; i < messages.length; i++) {
-        // Check if component is still mounted and cell should still be loading
         if (!loadingCells.has(cellIndex)) {
           console.log(`Cell ${cellIndex} loading cancelled`);
           return;
         }
 
         setLoadingMessages((prev) => ({ ...prev, [cellIndex]: messages[i] }))
-        const randomDelay = Math.floor(Math.random() * (1200 - 600 + 1)) + 600; // Faster for better UX
+        const randomDelay = Math.floor(Math.random() * (800 - 400 + 1)) + 400;
         await new Promise((resolve) => setTimeout(resolve, randomDelay))
       }
 
-      // Fetch the actual quote using simple scraper
+      // Fetch using the main scraping service (which has its own fallbacks)
       const response = await fetch('/api/scrape-quote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ cellId: cellIndex, useSimple: true }),
-        signal: AbortSignal.timeout(15000) // 15 second timeout
+        body: JSON.stringify({ cellId: cellIndex }),
+        signal: AbortSignal.timeout(30000) // 30 second timeout
       })
 
       if (!response.ok) {

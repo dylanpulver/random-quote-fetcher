@@ -1,5 +1,4 @@
 import { scrapingService } from '@/lib/scraping-service';
-import { simpleScrapingService } from '@/lib/simple-scraper';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -14,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { cellId, useSimple = false } = body;
+    const { cellId } = body;
 
     if (typeof cellId !== 'number') {
       return NextResponse.json(
@@ -23,48 +22,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let quote;
-    let method = 'puppeteer';
-
-    if (useSimple) {
-      // Use simple HTTP-based scraping
-      quote = await simpleScrapingService.getRandomQuote();
-      method = 'simple';
-    } else {
-      try {
-        // Try Puppeteer first with timeout
-        const puppeteerPromise = scrapingService.getRandomQuote();
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Puppeteer timeout after 90 seconds')), 90000)
-        );
-
-        quote = await Promise.race([puppeteerPromise, timeoutPromise]);
-      } catch (puppeteerError) {
-        console.warn('Puppeteer failed, falling back to simple scraper:', puppeteerError);
-        try {
-          quote = await simpleScrapingService.getRandomQuote();
-          method = 'simple-fallback';
-        } catch (fallbackError) {
-          console.error('Both scrapers failed:', fallbackError);
-          return NextResponse.json(
-            {
-              error: 'All scraping methods failed',
-              details: `Puppeteer: ${puppeteerError instanceof Error ? puppeteerError.message : 'Unknown error'}, Simple: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown error'}`
-            },
-            { status: 500 }
-          );
-        }
-      }
-    }
+    // Use the main scraping service with built-in fallbacks
+    const quote = await scrapingService.getRandomQuote();
 
     return NextResponse.json({
       success: true,
       cellId,
       quote,
-      method,
+      method: 'intelligent-scraper',
       cacheInfo: {
-        puppeteerCache: scrapingService.cacheSize,
-        simpleCache: simpleScrapingService.cacheSize,
+        cacheSize: scrapingService.cacheSize,
         usedQuotes: scrapingService.usedQuotesCount,
         queueLength: scrapingService.queueLength,
         activeRequests: scrapingService.activeRequestsCount
@@ -88,8 +55,7 @@ export async function GET() {
   return NextResponse.json({
     status: 'Quote scraping service is running',
     cacheInfo: {
-      puppeteerCache: scrapingService.cacheSize,
-      simpleCache: simpleScrapingService.cacheSize,
+      cacheSize: scrapingService.cacheSize,
       usedQuotes: scrapingService.usedQuotesCount,
       queueLength: scrapingService.queueLength,
       activeRequests: scrapingService.activeRequestsCount
