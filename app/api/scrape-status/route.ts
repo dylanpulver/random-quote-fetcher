@@ -1,112 +1,140 @@
+import {
+  APILogger,
+  createPlainErrorResponse,
+  createSSEHeaders,
+  formatSSEMessage,
+  isValidCellId,
+  parseRequestBody,
+  PerformanceTimer
+} from '@/lib/api-utils';
 import { scrapingService } from '@/lib/scraping-service';
 import { ScrapingProgress } from '@/lib/types';
 import { NextRequest } from 'next/server';
 
+const logger = new APILogger('SSE');
+
+/**
+ * POST /api/scrape-status - Stream quote fetching progress via Server-Sent Events
+ * Provides real-time updates on scraping progress
+ */
 export async function POST(request: NextRequest) {
-  let body;
   try {
-    body = await request.json();
+    const body = await parseRequestBody(request);
+    const { cellId } = body;
+
+    if (!isValidCellId(cellId)) {
+      return createPlainErrorResponse('cellId is required and must be a number between 0-299', 400);
+    }
+
+    logger.info(`Starting streaming quote fetch for cell ${cellId}`);
+    return createSSEStream(cellId);
+
   } catch (error) {
-    console.error('Invalid JSON in request body:', error);
-    return new Response('Invalid JSON', { status: 400 });
+    const errorMessage = error instanceof Error ? error.message : 'Invalid request';
+    logger.error('Failed to start stream:', errorMessage);
+    return createPlainErrorResponse(errorMessage, 400);
   }
+}
 
-  const { cellId } = body;
+// ========================================
+// SSE Stream Implementation
+// ========================================
 
-  if (typeof cellId !== 'number') {
-    return new Response('cellId is required and must be a number', { status: 400 });
-  }
-
-  // Set up SSE headers
-  const headers = new Headers({
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Cache-Control'
-  });
-
+function createSSEStream(cellId: number): Response {
+  const headers = createSSEHeaders();
   const encoder = new TextEncoder();
+  const timer = new PerformanceTimer(`SSE stream for cell ${cellId}`);
+
   let controller: ReadableStreamDefaultController<Uint8Array>;
   let isClosed = false;
 
   const stream = new ReadableStream({
     start(ctrl) {
       controller = ctrl;
+      logger.info(`Stream started for cell ${cellId}`);
     },
     cancel() {
       isClosed = true;
+      logger.info(`Stream cancelled for cell ${cellId}`);
     }
   });
 
   const sendMessage = (data: Record<string, unknown>) => {
     if (isClosed) return;
 
-    const message = `data: ${JSON.stringify(data)}\n\n`;
-
     try {
+      const message = formatSSEMessage(data);
       controller.enqueue(encoder.encode(message));
     } catch (error) {
-      console.error('Error sending SSE message:', error);
-      isClosed = true;
+      logger.error(`Error sending message to cell ${cellId}:`, error);
+      closeStream();
     }
+  };
+
+  const closeStream = () => {
+    if (isClosed) return;
+
+    try {
+      controller.close();
+    } catch (error) {
+      logger.error(`Error closing stream for cell ${cellId}:`, error);
+    }
+
+    isClosed = true;
   };
 
   // Start scraping with progress updates
   scrapingService.scrapeQuote((progress: ScrapingProgress) => {
     if (isClosed) return;
 
-    const data = {
+    sendMessage({
       cellId,
       stage: progress.stage,
       message: progress.message,
       totalStages: progress.totalStages,
       timestamp: Date.now()
-    };
-
-    sendMessage(data);
+    });
   })
   .then((quote) => {
     if (isClosed) return;
 
+    const responseTime = timer.complete(logger);
+
     // Send final result
-    const finalData = {
+    sendMessage({
       cellId,
       stage: 'complete',
       quote,
+      responseTime,
       timestamp: Date.now()
-    };
+    });
 
-    sendMessage(finalData);
-
-    try {
-      controller.close();
-    } catch (error) {
-      console.error('Error closing controller:', error);
-    }
-    isClosed = true;
+    closeStream();
   })
   .catch((error) => {
     if (isClosed) return;
 
-    console.error('Scraping error for cell', cellId, ':', error);
+    const responseTime = timer.elapsed();
+    const errorMessage = error instanceof Error ? error.message : 'Unknown scraping error';
 
-    // Send error
-    const errorData = {
+    logger.error(`Scraping error for cell ${cellId} after ${responseTime}ms:`, errorMessage);
+
+    // Send error with additional context
+    sendMessage({
       cellId,
       stage: 'error',
-      error: error.message || 'Unknown scraping error',
-      timestamp: Date.now()
-    };
+      error: errorMessage,
+      responseTime,
+      timestamp: Date.now(),
+      cacheInfo: {
+        cacheSize: scrapingService.cacheSize,
+        usedQuotes: scrapingService.usedQuotesCount,
+        queueLength: scrapingService.queueLength,
+        activeRequests: scrapingService.activeRequestsCount
+      }
+    });
 
-    sendMessage(errorData);
-
-    try {
-      controller.close();
-    } catch (closeError) {
-      console.error('Error closing controller after error:', closeError);
-    }
-    isClosed = true;
+    closeStream();
   });
 
   return new Response(stream, { headers });

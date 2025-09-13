@@ -1,29 +1,36 @@
+import {
+  APILogger,
+  createErrorResponse,
+  createSuccessResponse,
+  isValidCellId,
+  parseRequestBody,
+  PerformanceTimer
+} from '@/lib/api-utils';
 import { scrapingService } from '@/lib/scraping-service';
 import { CacheInfo } from '@/lib/types';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
+const logger = new APILogger('API');
+
+/**
+ * POST /api/scrape-quote - Fetch a random quote synchronously
+ * Returns a single quote with cache information
+ */
 export async function POST(request: NextRequest) {
-  try {
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
-    }
+  const timer = new PerformanceTimer(`Quote fetch`);
 
+  try {
+    const body = await parseRequestBody(request);
     const { cellId } = body;
 
-    if (typeof cellId !== 'number') {
-      return NextResponse.json(
-        { error: 'cellId is required and must be a number' },
-        { status: 400 }
-      );
+    if (!isValidCellId(cellId)) {
+      return createErrorResponse('cellId is required and must be a number between 0-299', 400);
     }
 
+    logger.info(`Starting quote fetch for cell ${cellId}`);
+
     const quote = await scrapingService.getRandomQuote();
+    const responseTime = timer.complete(logger);
 
     const cacheInfo: CacheInfo = {
       cacheSize: scrapingService.cacheSize,
@@ -32,37 +39,49 @@ export async function POST(request: NextRequest) {
       activeRequests: scrapingService.activeRequestsCount
     };
 
-    return NextResponse.json({
-      success: true,
+    return createSuccessResponse({
       cellId,
       quote,
       method: 'intelligent-scraper',
-      cacheInfo
+      cacheInfo,
+      responseTime
     });
 
   } catch (error) {
-    console.error('Quote scraping error:', error);
+    const responseTime = timer.elapsed();
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    return NextResponse.json(
-      {
-        error: 'Failed to scrape quote',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
+    logger.error(`Quote scraping failed after ${responseTime}ms:`, errorMessage);
+
+    return createErrorResponse(
+      'Failed to scrape quote',
+      500,
+      { details: errorMessage, responseTime }
     );
   }
 }
 
+/**
+ * GET /api/scrape-quote - Health check and service status
+ */
 export async function GET() {
-  const cacheInfo: CacheInfo = {
-    cacheSize: scrapingService.cacheSize,
-    usedQuotes: scrapingService.usedQuotesCount,
-    queueLength: scrapingService.queueLength,
-    activeRequests: scrapingService.activeRequestsCount
-  };
+  try {
+    const cacheInfo: CacheInfo = {
+      cacheSize: scrapingService.cacheSize,
+      usedQuotes: scrapingService.usedQuotesCount,
+      queueLength: scrapingService.queueLength,
+      activeRequests: scrapingService.activeRequestsCount
+    };
 
-  return NextResponse.json({
-    status: 'Quote scraping service is running',
-    cacheInfo
-  });
+    const healthStatus = scrapingService.getHealthStatus();
+
+    return createSuccessResponse({
+      status: 'Quote scraping service is running',
+      cacheInfo,
+      healthStatus
+    });
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    return createErrorResponse('Health check failed', 500);
+  }
 }
