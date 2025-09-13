@@ -177,6 +177,7 @@ class ScrapingService {
       const randomPage = Math.floor(Math.random() * 10) + 1;
       const stages = [
         'Starting fetch...',
+        'Logging in...',
         `Browsing to page ${randomPage}...`,
         'Loading quotes...',
         'Selecting random quote...',
@@ -184,22 +185,32 @@ class ScrapingService {
       ];
 
       // Stage 1: Starting
-      onProgress?.({ stage: 1, message: stages[0], totalStages: 5 });
-      await this.randomDelay();
+      onProgress?.({ stage: 1, message: stages[0], totalStages: 6 });
+      await this.randomDelay(500, 800); // Shorter delay for starting
 
-      // Stage 2: Browsing to page
-      onProgress?.({ stage: 2, message: stages[1], totalStages: 5 });
+      // Stage 2: Logging in
+      onProgress?.({ stage: 2, message: stages[1], totalStages: 6 });
+      try {
+        await this.performLogin(page);
+      } catch (loginError) {
+        console.warn('Login failed, continuing without login:', loginError);
+        // Continue without login - some quotes might not have Goodreads links
+      }
+      await this.randomDelay(300, 600); // Small delay for login
+
+      // Stage 3: Browsing to page
+      onProgress?.({ stage: 3, message: stages[2], totalStages: 6 });
 
       const targetUrl = randomPage === 1 ? 'https://quotes.toscrape.com/' : `https://quotes.toscrape.com/page/${randomPage}/`;
       await page.goto(targetUrl, { waitUntil: 'networkidle2' });
       await this.randomDelay();
 
-      // Stage 3: Loading quotes
-      onProgress?.({ stage: 3, message: stages[2], totalStages: 5 });
+      // Stage 4: Loading quotes
+      onProgress?.({ stage: 4, message: stages[3], totalStages: 6 });
       await this.randomDelay();
 
-      // Stage 4: Selecting quote
-      onProgress?.({ stage: 4, message: stages[3], totalStages: 5 });
+      // Stage 5: Selecting quote
+      onProgress?.({ stage: 5, message: stages[4], totalStages: 6 });
 
       // Scrape quotes from current page
       const newQuotes = await page.evaluate(() => {
@@ -212,9 +223,9 @@ class ScrapingService {
           const tagElements = element.querySelectorAll('.tag');
           const tags = Array.from(tagElements).map(tag => tag.textContent?.trim() || '');
 
-          // Get author URL (available without login)
-          const aboutLink = element.querySelector('a[href*="/author/"]')?.getAttribute('href');
-          const sourceUrl = aboutLink ? `https://quotes.toscrape.com${aboutLink}` : undefined;
+          // Extract Goodreads URL (available after login)
+          const goodreadsLink = element.querySelector('a[href*="goodreads.com"]')?.getAttribute('href');
+          const sourceUrl = goodreadsLink || undefined;
 
           if (text && author) {
             quotes.push({ text, author, tags, sourceUrl });
@@ -228,8 +239,8 @@ class ScrapingService {
       this.quotesCache.push(...newQuotes);
       await this.randomDelay();
 
-      // Stage 5: Selected
-      onProgress?.({ stage: 5, message: stages[4], totalStages: 5 });
+      // Stage 6: Selected
+      onProgress?.({ stage: 6, message: stages[5], totalStages: 6 });
 
       // Select a random quote from newly scraped ones
       if (newQuotes.length === 0) {
@@ -249,10 +260,39 @@ class ScrapingService {
     }
   }
 
+  private async performLogin(page: Page): Promise<void> {
+    try {
+      // Navigate to login page
+      await page.goto('https://quotes.toscrape.com/login', { waitUntil: 'networkidle2' });
+
+      // Fill in the login form with dummy credentials
+      await page.type('input[name="username"]', 'abc');
+      await page.type('input[name="password"]', '123');
+
+      // Submit the form
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle2' }),
+        page.click('input[type="submit"]')
+      ]);
+
+      // Verify login was successful by checking if we're redirected away from login page
+      const currentUrl = page.url();
+      if (currentUrl.includes('/login')) {
+        throw new Error('Login appears to have failed - still on login page');
+      }
+
+      console.log('Login successful');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }
+
   private async simulateLoadingStages(onProgress?: (progress: ScrapingProgress) => void) {
     const randomPage = Math.floor(Math.random() * 10) + 1;
     const stages = [
       'Starting fetch...',
+      'Logging in...',
       `Browsing to page ${randomPage}...`,
       'Loading quotes...',
       'Selecting random quote...',
@@ -260,13 +300,19 @@ class ScrapingService {
     ];
 
     for (let i = 0; i < stages.length; i++) {
-      onProgress?.({ stage: i + 1, message: stages[i], totalStages: 5 });
-      await this.randomDelay();
+      onProgress?.({ stage: i + 1, message: stages[i], totalStages: 6 });
+      if (i === 0) {
+        await this.randomDelay(500, 800); // Shorter for starting
+      } else if (i === 1) {
+        await this.randomDelay(300, 600); // Small delay for login
+      } else {
+        await this.randomDelay();
+      }
     }
   }
 
-  private async randomDelay(): Promise<void> {
-    const delay = Math.floor(Math.random() * (2400 - 1200 + 1)) + 1200;
+  private async randomDelay(min: number = 1200, max: number = 2400): Promise<void> {
+    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
     await new Promise(resolve => setTimeout(resolve, delay));
   }
 
