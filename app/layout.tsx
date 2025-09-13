@@ -1,17 +1,23 @@
+import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+import { ThemeScript } from "@/components/ThemeScript";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+// Font optimization
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: 'swap', // Better font loading performance
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: 'swap',
 });
 
+// Metadata configuration
 export const metadata: Metadata = {
   title: "Random Quote Fetcher",
   description: "A high-performance web application for fetching random quotes with real-time scraping from quotes.toscrape.com. Supports up to 300 concurrent requests with intelligent caching, memory management, and keyboard navigation.",
@@ -36,14 +42,14 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://www.randomquotefetcher.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://www.randomquotefetcher.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: "Random Quote Fetcher - High Performance Quote Discovery",
     description: "Discover inspiring quotes with an interactive grid interface. Supports 300 concurrent requests with real-time scraping and intelligent caching.",
-    url: 'https://www.randomquotefetcher.com',
+    url: process.env.NEXT_PUBLIC_BASE_URL || 'https://www.randomquotefetcher.com',
     siteName: 'Random Quote Fetcher',
     images: [
       {
@@ -75,47 +81,33 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
   },
   other: {
-    // Performance hints
     'color-scheme': 'light dark',
     'theme-color': '#f8fafc',
   }
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
+interface RootLayoutProps {
   children: React.ReactNode;
-}>) {
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Performance optimizations */}
         <link rel="preconnect" href="https://quotes.toscrape.com" />
         <link rel="dns-prefetch" href="https://quotes.toscrape.com" />
 
-        {/* Prevent FOUC (Flash of Unstyled Content) */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme') || 'light';
-                  document.documentElement.setAttribute('data-theme', theme);
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
+        {/* Theme script to prevent FOUC */}
+        <ThemeScript />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        {/* Global error boundary wrapper */}
+        {/* Fallback for users without JavaScript */}
         <noscript>
           <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
             <div className="max-w-md w-full bg-white border border-amber-200 rounded-xl p-6 shadow-lg text-center">
@@ -135,35 +127,8 @@ export default function RootLayout({
           {children}
         </div>
 
-        {/* Performance monitoring script for development */}
-        {process.env.NODE_ENV === 'development' && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function() {
-                  if (typeof window !== 'undefined' && window.performance) {
-                    window.addEventListener('load', function() {
-                      setTimeout(function() {
-                        var timing = window.performance.timing;
-                        var loadTime = timing.loadEventEnd - timing.navigationStart;
-                        console.log('Page load time:', loadTime + 'ms');
-
-                        // Log memory usage if available
-                        if (window.performance.memory) {
-                          console.log('Memory usage:', {
-                            used: Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024) + 'MB',
-                            total: Math.round(window.performance.memory.totalJSHeapSize / 1024 / 1024) + 'MB',
-                            limit: Math.round(window.performance.memory.jsHeapSizeLimit / 1024 / 1024) + 'MB'
-                          });
-                        }
-                      }, 0);
-                    });
-                  }
-                })();
-              `,
-            }}
-          />
-        )}
+        {/* Performance monitoring (development only) */}
+        <PerformanceMonitor />
       </body>
     </html>
   );
