@@ -378,7 +378,7 @@ export default function Home() {
 
   }, [cellContent, loadingCells, startScrapingWithSSE, startScrapingFallback]);
 
-  // Keyboard navigation with enhanced error handling
+  // Keyboard navigation with enhanced non-contiguous selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       try {
@@ -401,15 +401,14 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  setSelectedCells(new Set([focusedCell]))
+                  // Don't clear existing selections - add current cell to them
+                  setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
+                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
-              } else {
-                setSelectionStart(null)
-                setSelectionPath([])
-                setSelectedCells(new Set())
               }
+              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "ArrowDown":
@@ -422,15 +421,14 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  setSelectedCells(new Set([focusedCell]))
+                  // Don't clear existing selections - add current cell to them
+                  setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
+                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
-              } else {
-                setSelectionStart(null)
-                setSelectionPath([])
-                setSelectedCells(new Set())
               }
+              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "ArrowLeft":
@@ -442,15 +440,14 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  setSelectedCells(new Set([focusedCell]))
+                  // Don't clear existing selections - add current cell to them
+                  setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
+                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
-              } else {
-                setSelectionStart(null)
-                setSelectionPath([])
-                setSelectedCells(new Set())
               }
+              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "ArrowRight":
@@ -462,20 +459,20 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  setSelectedCells(new Set([focusedCell]))
+                  // Don't clear existing selections - add current cell to them
+                  setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
+                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
-              } else {
-                setSelectionStart(null)
-                setSelectionPath([])
-                setSelectedCells(new Set())
               }
+              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "x":
           case "X":
             e.preventDefault()
+            // Toggle the currently focused cell in/out of selection
             setSelectedCells((prev) => {
               const newSet = new Set(prev)
               if (newSet.has(focusedCell)) {
@@ -485,6 +482,7 @@ export default function Home() {
               }
               return newSet
             })
+            // Clear shift-selection state since we're doing individual toggles
             setSelectionStart(null)
             setSelectionPath([])
             break
@@ -638,7 +636,7 @@ export default function Home() {
 
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">X</div>
-                    <span className="text-sm text-slate-600">Select</span>
+                    <span className="text-sm text-slate-600">Toggle</span>
                   </div>
 
                   <div className="w-px h-4 bg-slate-300"></div>
@@ -692,7 +690,7 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">Arrow Keys</span>
-                  <span className="text-slate-500">Navigate cells</span>
+                  <span className="text-slate-500">Navigate (keep selection)</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-medium text-slate-700">X</span>

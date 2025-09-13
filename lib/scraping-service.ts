@@ -25,25 +25,43 @@ class ScrapingService {
   private quotesCache: Map<string, CacheEntry> = new Map();
   private usedQuotes: Set<string> = new Set();
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null; // Prevent multiple concurrent initializations
 
   // HYBRID APPROACH - Use limited Puppeteer + Cache for high concurrency
-  private readonly MAX_PUPPETEER_CONCURRENT = 10; // Keep Puppeteer limited
+  private readonly MAX_PUPPETEER_CONCURRENT = 5; // Reduced from 10
   private readonly MAX_CONCURRENT = 300; // Total concurrent support
   private readonly SCRAPING_QUEUE: Array<() => Promise<void>> = [];
   private activePuppeteerRequests = 0;
   private activeRequests = 0;
 
   // MEMORY MANAGEMENT
-  private readonly MAX_CACHE_SIZE = 2000; // Increased for 300 concurrent
+  private readonly MAX_CACHE_SIZE = 2000;
   private readonly MAX_USED_QUOTES = 1000;
   private readonly CACHE_TTL = 60 * 60 * 1000; // 1 hour
   private readonly CLEANUP_INTERVAL = 10 * 60 * 1000; // 10 minutes
   private cleanupTimer: NodeJS.Timeout | null = null;
+  private backgroundScrapingTimer: NodeJS.Timeout | null = null;
 
   async initialize() {
-    if (this.isInitialized) return;
+    // Prevent multiple concurrent initializations
+    if (this.initializationPromise) {
+      console.log('Waiting for existing initialization to complete...');
+      return this.initializationPromise;
+    }
 
+    if (this.isInitialized) {
+      console.log('Scraping service already initialized');
+      return;
+    }
+
+    this.initializationPromise = this._performInitialization();
+    return this.initializationPromise;
+  }
+
+  private async _performInitialization() {
     try {
+      console.log('Starting scraping service initialization...');
+
       // Initialize Puppeteer first
       await this.initializePuppeteer();
 
@@ -57,9 +75,11 @@ class ScrapingService {
       this.startBackgroundScraping();
 
       this.isInitialized = true;
+      this.initializationPromise = null; // Reset for future re-initializations if needed
       console.log(`Scraping service initialized with ${this.quotesCache.size} real quotes from quotes.toscrape.com`);
     } catch (error) {
       console.error('Failed to initialize scraping service:', error);
+      this.initializationPromise = null; // Reset so we can try again
       // Don't fall back to fake quotes - let it fail and scrape on demand
       this.isInitialized = true;
     }
@@ -71,13 +91,14 @@ class ScrapingService {
 
     // Scrape multiple pages immediately to populate cache
     const initialScrapePromises = [];
-    for (let page = 1; page <= 5; page++) {
+    for (let page = 1; page <= 3; page++) { // Reduced from 5 to 3 to be gentler
       initialScrapePromises.push(this.scrapePageToCache(page));
     }
 
     try {
-      await Promise.allSettled(initialScrapePromises);
-      console.log(`Initial cache populated with ${this.quotesCache.size} real quotes from website`);
+      const results = await Promise.allSettled(initialScrapePromises);
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      console.log(`Initial cache populated with ${this.quotesCache.size} real quotes from website (${successful}/${results.length} pages successful)`);
     } catch (error) {
       console.error('Failed to populate initial cache:', error);
       // If we can't scrape, the app should fail gracefully but still try to scrape on demand
@@ -85,6 +106,11 @@ class ScrapingService {
   }
 
   private async initializePuppeteer() {
+    if (this.browser) {
+      console.log('Puppeteer already initialized');
+      return;
+    }
+
     try {
       const isVercel = process.env.VERCEL === '1';
       const isLinux = process.platform === 'linux';
@@ -99,10 +125,10 @@ class ScrapingService {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--single-process', // Important for high concurrency
+            '--single-process',
             '--no-zygote'
           ],
-          defaultViewport: { width: 1280, height: 720 }, // Set explicit viewport
+          defaultViewport: { width: 1280, height: 720 },
           executablePath: await chromium.default.executablePath(),
           headless: "shell",
         }) as unknown as Browser;
@@ -114,7 +140,7 @@ class ScrapingService {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--single-process', // Important for high concurrency
+            '--single-process',
             '--no-zygote'
           ]
         }) as unknown as Browser;
@@ -128,7 +154,8 @@ class ScrapingService {
 
   private async scrapePageToCache(pageNum: number) {
     if (!this.browser || this.activePuppeteerRequests >= this.MAX_PUPPETEER_CONCURRENT) {
-      return;
+      console.log(`Skipping page ${pageNum} - browser not available or too many active requests`);
+      return [];
     }
 
     this.activePuppeteerRequests++;
@@ -150,23 +177,23 @@ class ScrapingService {
         try {
           await page.goto('https://quotes.toscrape.com/login', {
             waitUntil: 'domcontentloaded',
-            timeout: 10000
+            timeout: 15000 // Increased timeout
           });
           await page.type('input[name="username"]', 'admin');
           await page.type('input[name="password"]', 'admin');
           await Promise.all([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 10000 }),
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }),
             page.click('input[type="submit"]')
           ]);
         } catch (loginError) {
-          console.warn('Login failed, continuing without sourceURLs:', loginError);
+          console.warn(`Login failed for page ${pageNum}, continuing without sourceURLs:`, loginError);
         }
 
         const url = pageNum === 1 ? 'https://quotes.toscrape.com/' : `https://quotes.toscrape.com/page/${pageNum}/`;
 
         await page.goto(url, {
           waitUntil: 'domcontentloaded',
-          timeout: 10000
+          timeout: 15000
         });
 
         const quotes = await page.evaluate(() => {
@@ -227,9 +254,14 @@ class ScrapingService {
   }
 
   private startBackgroundScraping() {
+    // Clear existing timer if any
+    if (this.backgroundScrapingTimer) {
+      clearInterval(this.backgroundScrapingTimer);
+    }
+
     // Continuously scrape in background to keep cache fresh with REAL quotes
-    setInterval(async () => {
-      if (this.quotesCache.size < this.MAX_CACHE_SIZE / 2) {
+    this.backgroundScrapingTimer = setInterval(async () => {
+      if (this.quotesCache.size < this.MAX_CACHE_SIZE / 2 && this.activePuppeteerRequests < this.MAX_PUPPETEER_CONCURRENT) {
         try {
           // Scrape a random page from the website
           const randomPage = Math.floor(Math.random() * 10) + 1;
@@ -238,7 +270,7 @@ class ScrapingService {
           console.warn('Background scraping failed:', error);
         }
       }
-    }, 30000); // Every 30 seconds
+    }, 60000); // Every 60 seconds instead of 30
   }
 
   private startCleanupTimer() {
@@ -282,7 +314,9 @@ class ScrapingService {
         .forEach(quote => this.usedQuotes.add(quote));
     }
 
-    console.log(`Memory cleanup: Cache ${this.quotesCache.size}, Used ${this.usedQuotes.size}`);
+    if (expiredKeys.length > 0) {
+      console.log(`Memory cleanup: Removed ${expiredKeys.length} expired entries. Cache ${this.quotesCache.size}, Used ${this.usedQuotes.size}`);
+    }
   }
 
   // ENHANCED CONCURRENCY - Process multiple requests immediately
@@ -302,7 +336,7 @@ class ScrapingService {
   }
 
   async scrapeQuote(onProgress?: (progress: ScrapingProgress) => void): Promise<Quote> {
-    if (!this.isInitialized) {
+    if (!this.isInitialized || this.initializationPromise) {
       await this.initialize();
     }
 
@@ -341,32 +375,32 @@ class ScrapingService {
     // If no cache available, scrape on-demand from the website
     console.log('Cache empty, scraping on-demand from quotes.toscrape.com');
 
-    if (this.quotesCache.size === 0) {
-      // Reset used quotes if we've exhausted everything
+    // If we've exhausted all quotes, reset the used set
+    if (this.quotesCache.size > 0) {
       this.usedQuotes.clear();
 
-      // Try to scrape immediately
-      try {
-        const quotes = await this.scrapePageToCache(Math.floor(Math.random() * 10) + 1);
-        if (quotes && quotes.length > 0) {
-          const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-          this.usedQuotes.add(randomQuote.text);
-          await this.simulateLoadingStages(onProgress);
-          return randomQuote;
-        }
-      } catch (error) {
-        console.error('On-demand scraping failed:', error);
+      const allCached = Array.from(this.quotesCache.values()).map(entry => entry.quote);
+      if (allCached.length > 0) {
+        const randomQuote = allCached[Math.floor(Math.random() * allCached.length)];
+        this.usedQuotes.add(randomQuote.text);
+        await this.simulateLoadingStages(onProgress);
+        return randomQuote;
       }
     }
 
-    // If all else fails, reset the used quotes and try again from cache
-    this.usedQuotes.clear();
-    const allCached = Array.from(this.quotesCache.values()).map(entry => entry.quote);
-    if (allCached.length > 0) {
-      const randomQuote = allCached[Math.floor(Math.random() * allCached.length)];
-      this.usedQuotes.add(randomQuote.text);
-      await this.simulateLoadingStages(onProgress);
-      return randomQuote;
+    // Try to scrape immediately as last resort
+    try {
+      await this.scrapePageToCache(Math.floor(Math.random() * 10) + 1);
+
+      const newCached = Array.from(this.quotesCache.values()).map(entry => entry.quote);
+      if (newCached.length > 0) {
+        const randomQuote = newCached[Math.floor(Math.random() * newCached.length)];
+        this.usedQuotes.add(randomQuote.text);
+        await this.simulateLoadingStages(onProgress);
+        return randomQuote;
+      }
+    } catch (error) {
+      console.error('On-demand scraping failed:', error);
     }
 
     throw new Error('Unable to fetch quotes from quotes.toscrape.com - please check your connection');
@@ -402,6 +436,11 @@ class ScrapingService {
       this.cleanupTimer = null;
     }
 
+    if (this.backgroundScrapingTimer) {
+      clearInterval(this.backgroundScrapingTimer);
+      this.backgroundScrapingTimer = null;
+    }
+
     if (this.browser) {
       try {
         await this.browser.close();
@@ -412,6 +451,7 @@ class ScrapingService {
     }
 
     this.isInitialized = false;
+    this.initializationPromise = null;
     this.quotesCache.clear();
     this.usedQuotes.clear();
   }
