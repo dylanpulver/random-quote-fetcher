@@ -22,9 +22,10 @@ export default function Home() {
   // Get current number of columns based on screen size
   const getColumns = () => {
     if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 768) return 3 // md and up - 3 columns
-      if (window.innerWidth >= 480) return 2 // sm to md - 2 columns
-      return 2 // xs - 2 columns (but smaller cells)
+      if (window.innerWidth >= 1024) return 3 // lg and up - 3 columns
+      if (window.innerWidth >= 640) return 3 // sm to lg - keep 3 columns, let sidebars shrink
+      if (window.innerWidth >= 480) return 2 // xs to sm - 2 columns
+      return 2 // very small - 2 columns
     }
     return 3 // default for SSR
   }
@@ -358,7 +359,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 sm:p-6 lg:p-8 bg-slate-50">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-6xl lg:max-w-7xl">
         <div className="text-center mb-8 md:mb-12">
           <div className="relative">
             {/* Background decoration */}
@@ -438,7 +439,7 @@ export default function Home() {
 
         <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8">
           {/* Left section - Actions - Hide on mobile, collapse on tablet */}
-          <div className="hidden md:block w-full lg:w-72 bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm order-2 lg:order-1">
+          <div className="hidden md:block w-full lg:w-56 xl:w-72 bg-white border border-slate-200 rounded-xl p-3 md:p-4 lg:p-6 shadow-sm order-2 lg:order-1">
             <h2 className="text-base md:text-lg font-semibold mb-4 md:mb-5 text-slate-900">Keyboard Controls</h2>
             <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
               <div className="flex justify-between items-center">
@@ -483,8 +484,8 @@ export default function Home() {
                   columns === 2 ? 'grid-cols-2' : 'grid-cols-3'
                 }`} style={{
                   gridTemplateColumns: columns === 2
-                    ? 'repeat(2, minmax(120px, 1fr))'
-                    : 'repeat(3, minmax(140px, 1fr))'
+                    ? 'repeat(2, minmax(140px, 180px))'
+                    : 'repeat(3, minmax(160px, 200px))'
                 }}>
                   {Array.from({ length: 300 }, (_, i) => {
                     const isSelected = selectedCells.has(i)
@@ -496,7 +497,7 @@ export default function Home() {
                       <div
                         key={i}
                         className={`
-                          min-h-[64px] aspect-[2.5/1] max-w-[200px]
+                          min-h-[64px] aspect-[2.5/1] max-w-[220px]
                           border-2 rounded-lg md:rounded-xl flex items-center justify-center font-medium
                           transition-all duration-200 cursor-pointer hover:shadow-md hover:border-slate-300
                           ${isFocused && !isSelected
@@ -537,7 +538,7 @@ export default function Home() {
           </div>
 
           {/* Right section - Details */}
-          <div className="w-full lg:w-72 bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm order-3">
+          <div className="w-full lg:w-56 xl:w-72 bg-white border border-slate-200 rounded-xl p-3 md:p-4 lg:p-6 shadow-sm order-3">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base md:text-lg font-semibold text-slate-900">Quote Details</h2>
               {focusedCell !== null && cellContent[focusedCell]?.sourceUrl && (
