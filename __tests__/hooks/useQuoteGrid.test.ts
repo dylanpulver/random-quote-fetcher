@@ -1,4 +1,3 @@
-// __tests__/hooks/useQuoteGrid.test.ts - Minimal working version
 import { useQuoteGrid } from '@/hooks/useQuoteGrid';
 import { act, renderHook } from '@testing-library/react';
 

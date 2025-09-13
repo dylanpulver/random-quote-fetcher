@@ -1,7 +1,6 @@
-// __tests__/lib/config/scraping-config.test.ts
 import {
-    getScrapingConfig,
-    getScrapingConfigWithEnvOverrides
+  getScrapingConfig,
+  getScrapingConfigWithEnvOverrides
 } from '@/lib/config/scraping-config';
 
 describe('Scraping Configuration', () => {

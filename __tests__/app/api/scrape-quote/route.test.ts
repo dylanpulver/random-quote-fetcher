@@ -1,4 +1,3 @@
-// __tests__/app/api/scrape-quote/route.test.ts - Final fixed version
 import { GET, POST } from '@/app/api/scrape-quote/route';
 
 // Mock the scraping service BEFORE the import

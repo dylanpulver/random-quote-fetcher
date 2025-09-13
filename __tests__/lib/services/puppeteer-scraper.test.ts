@@ -1,4 +1,3 @@
-// __tests__/lib/services/puppeteer-scraper.test.ts - Minimal working version
 import { ScrapingConfig } from '@/lib/config/scraping-config';
 import { PuppeteerScraper } from '@/lib/services/puppeteer-scraper';
 

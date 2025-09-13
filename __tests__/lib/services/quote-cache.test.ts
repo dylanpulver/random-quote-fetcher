@@ -1,4 +1,3 @@
-// __tests__/lib/services/quote-cache.test.ts - Fixed version
 import { ScrapingConfig } from '@/lib/config/scraping-config';
 import { QuoteCacheService } from '@/lib/services/quote-cache';
 import { Quote } from '@/lib/types';
