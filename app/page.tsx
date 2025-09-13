@@ -1,9 +1,9 @@
 "use client"
 
+import { APIErrorBoundary, ErrorBoundary, GridErrorBoundary } from "@/components/ErrorBoundary";
+import { QuoteGridCells } from "@/components/QuoteGridCells";
+import { useQuoteGrid } from "@/hooks/useQuoteGrid";
 import Image from "next/image";
-import { APIErrorBoundary, ErrorBoundary, GridErrorBoundary } from "../components/ErrorBoundary";
-import { QuoteGridCells } from "../components/QuoteGridCells";
-import { useQuoteGrid } from "../hooks/useQuoteGrid";
 
 export default function Home() {
   // All state and logic is handled by the custom hook
