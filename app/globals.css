@@ -3,6 +3,21 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+
+  /* Grid-specific custom properties */
+  --cell-border-radius: 0.5rem; /* 8px */
+  --cell-border-radius-md: 0.75rem; /* 12px */
+  --cell-transition-duration: 200ms;
+  --cell-hover-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --cell-selected-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Performance metrics colors */
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --warning-color: #f59e0b;
+
+  /* Loading animation timing */
+  --pulse-duration: 2s;
 }
 
 @theme inline {
@@ -71,6 +86,11 @@ html {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* Disable pulse animation for loading states */
+  .animate-pulse {
+    animation: none !important;
+  }
 }
 
 /* Focus styles for keyboard navigation */
@@ -79,11 +99,19 @@ html {
   outline-offset: 2px;
 }
 
+/* Enhanced keyboard focus for grid cells */
+.grid-cell:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+  z-index: 10;
+}
+
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   :root {
     --background: #ffffff;
     --foreground: #000000;
+    --cell-border-radius: 0.25rem; /* Sharper corners for high contrast */
   }
 
   @media (prefers-color-scheme: dark) {
@@ -91,5 +119,104 @@ html {
       --background: #000000;
       --foreground: #ffffff;
     }
+  }
+
+  /* Stronger borders in high contrast mode */
+  .grid-cell {
+    border-width: 3px !important;
+  }
+}
+
+/* Global utility classes for the app */
+.text-gradient {
+  background: linear-gradient(to right, #0f172a, #374151, #0f172a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Loading animations */
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.loading-shimmer {
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%);
+  background-size: 200px 100%;
+  animation: shimmer var(--pulse-duration) infinite linear;
+}
+
+/* Performance metrics styling */
+.metric-success { color: var(--success-color); }
+.metric-error { color: var(--error-color); }
+.metric-warning { color: var(--warning-color); }
+
+/* Grid-specific optimizations */
+.grid-container {
+  /* Enable GPU acceleration for smooth scrolling */
+  transform: translateZ(0);
+  will-change: scroll-position;
+}
+
+.grid-cell {
+  /* Optimize for frequent updates */
+  transform: translateZ(0);
+  will-change: background-color, border-color, box-shadow;
+  transition: all var(--cell-transition-duration) ease-out;
+}
+
+/* Hover and selection states */
+.grid-cell:hover:not(.selected) {
+  box-shadow: var(--cell-hover-shadow);
+  transform: translateY(-1px);
+}
+
+.grid-cell.selected {
+  box-shadow: var(--cell-selected-shadow);
+  transform: translateY(-1px);
+}
+
+.grid-cell.focused:not(.selected) {
+  transform: translateY(-1px);
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .grid-cell {
+    /* Reduce animations on mobile for better performance */
+    transition-duration: 150ms;
+  }
+
+  .grid-cell:hover {
+    /* Disable hover transform on touch devices */
+    transform: none;
+  }
+
+  /* Larger touch targets on mobile */
+  .grid-cell {
+    min-height: 68px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .grid-cell {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #000;
+  }
+
+  .animate-pulse {
+    animation: none;
   }
 }

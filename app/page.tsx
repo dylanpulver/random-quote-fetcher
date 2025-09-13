@@ -386,14 +386,11 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  // Don't clear existing selections - add current cell to them
                   setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
-                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
               }
-              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "ArrowDown":
@@ -406,14 +403,11 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  // Don't clear existing selections - add current cell to them
                   setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
-                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
               }
-              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "ArrowLeft":
@@ -425,14 +419,11 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  // Don't clear existing selections - add current cell to them
                   setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
-                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
               }
-              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "ArrowRight":
@@ -444,20 +435,16 @@ export default function Home() {
                 if (selectionStart === null) {
                   setSelectionStart(focusedCell)
                   setSelectionPath([focusedCell])
-                  // Don't clear existing selections - add current cell to them
                   setSelectedCells((prev) => new Set([...prev, focusedCell]))
                 }
                 setSelectionPath((prev) => [...prev, newFocus])
-                // Add new cell to existing selections instead of replacing
                 setSelectedCells((prev) => new Set([...prev, newFocus]))
               }
-              // Note: Without shift, we just move focus but preserve existing selections
             }
             break
           case "x":
           case "X":
             e.preventDefault()
-            // Toggle the currently focused cell in/out of selection
             setSelectedCells((prev) => {
               const newSet = new Set(prev)
               if (newSet.has(focusedCell)) {
@@ -467,7 +454,6 @@ export default function Home() {
               }
               return newSet
             })
-            // Clear shift-selection state since we're doing individual toggles
             setSelectionStart(null)
             setSelectionPath([])
             break
@@ -501,13 +487,19 @@ export default function Home() {
         }
       } catch (error) {
         console.error('Keyboard navigation error:', error);
-        // Don't throw error for keyboard navigation issues
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [focusedCell, selectionStart, selectedCells, cellContent, loadingCells, selectionPath, columns, handleBulkFetch])
+
+  // Get success rate for performance display
+  const getSuccessRateClass = useCallback((rate: number) => {
+    if (rate >= 95) return "metric-success";
+    if (rate >= 85) return "metric-warning";
+    return "metric-error";
+  }, []);
 
   // Memoized grid cells for performance
   const gridCells = useMemo(() => {
@@ -517,26 +509,24 @@ export default function Home() {
       const isLoading = loadingCells.has(i)
       const hasContent = cellContent[i]
 
+      const cellClasses = [
+        "grid-cell",
+        "min-h-[64px] aspect-[2.5/1] max-w-[200px]",
+        "border-2 rounded-lg md:rounded-xl flex items-center justify-center font-medium",
+        "cursor-pointer",
+        isFocused && !isSelected ? "focused ring-2 ring-blue-500 bg-blue-50 border-blue-300 shadow-md" : "",
+        isSelected ? "selected bg-blue-500 text-white border-blue-500 shadow-lg ring-2 ring-blue-300" : "bg-white border-slate-200"
+      ].filter(Boolean).join(" ");
+
       return (
         <div
           key={i}
           onClick={() => handleCellClick(i)}
-          className={`
-            min-h-[64px] aspect-[2.5/1] max-w-[200px]
-            border-2 rounded-lg md:rounded-xl flex items-center justify-center font-medium
-            transition-all duration-200 cursor-pointer hover:shadow-md hover:border-slate-300
-            ${isFocused && !isSelected
-              ? "ring-2 ring-blue-500 bg-blue-50 border-blue-300 shadow-md"
-              : ""
-            }
-            ${isSelected
-              ? "bg-blue-500 text-white border-blue-500 shadow-lg ring-2 ring-blue-300"
-              : "bg-white border-slate-200"
-            }
-          `}
+          className={cellClasses}
+          tabIndex={isFocused ? 0 : -1}
         >
           {isLoading ? (
-            <span className={`text-xs animate-pulse px-2 text-center font-normal ${
+            <span className={`text-xs loading-shimmer px-2 text-center font-normal ${
               isSelected ? "text-blue-100" : "text-slate-500"
             }`}>
               {loadingMessages[i] || "Loading..."}
@@ -581,12 +571,11 @@ export default function Home() {
                       className="object-contain"
                       priority
                       onError={(e) => {
-                        // Hide broken image gracefully
                         e.currentTarget.style.display = 'none';
                       }}
                     />
                   </div>
-                  <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent text-center sm:text-left">
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-gradient text-center sm:text-left">
                     Random Quote Fetcher
                   </h1>
                 </div>
@@ -597,16 +586,18 @@ export default function Home() {
 
                 {/* Performance stats */}
                 {(performanceMetrics.totalRequests > 0 || performanceMetrics.concurrentRequests > 0) && (
-                  <div className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-2xl px-4 py-2 text-xs text-slate-600 mb-6">
+                  <div className="inline-flex items-center gap-4 glass-effect border border-slate-200/50 rounded-2xl px-4 py-2 text-xs text-slate-600 mb-6">
                     <span>Requests: {performanceMetrics.totalRequests}</span>
-                    <span>Success: {Math.round((performanceMetrics.successfulRequests / Math.max(performanceMetrics.totalRequests, 1)) * 100)}%</span>
+                    <span className={getSuccessRateClass(Math.round((performanceMetrics.successfulRequests / Math.max(performanceMetrics.totalRequests, 1)) * 100))}>
+                      Success: {Math.round((performanceMetrics.successfulRequests / Math.max(performanceMetrics.totalRequests, 1)) * 100)}%
+                    </span>
                     <span>Concurrent: {performanceMetrics.concurrentRequests}</span>
                     <span>Max: {performanceMetrics.maxConcurrentReached}</span>
                   </div>
                 )}
 
                 {/* Controls */}
-                <div className="hidden sm:inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm border border-slate-200/50 rounded-2xl px-6 py-3 shadow-sm">
+                <div className="hidden sm:inline-flex items-center gap-4 glass-effect border border-slate-200/50 rounded-2xl px-6 py-3 shadow-sm">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       <div className="w-6 h-6 bg-slate-100 border border-slate-300 rounded text-xs flex items-center justify-center font-medium text-slate-600">↑</div>
@@ -632,14 +623,14 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="sm:hidden text-xs text-slate-500 bg-white/60 backdrop-blur-sm border border-slate-200/50 rounded-xl px-4 py-2 max-w-xs mx-auto">
+                <div className="sm:hidden text-xs text-slate-500 glass-effect border border-slate-200/50 rounded-xl px-4 py-2 max-w-xs mx-auto">
                   Click cells to select • Use Space to fetch quotes
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Error display with better styling */}
+          {/* Error display */}
           <APIErrorBoundary>
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
@@ -665,7 +656,7 @@ export default function Home() {
           </APIErrorBoundary>
 
           <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-8">
-            {/* Left section - Actions */}
+            {/* Left section - Controls */}
             <div className="hidden md:block w-full lg:w-72 bg-white border border-slate-200 rounded-xl p-4 md:p-6 shadow-sm order-2 lg:order-1">
               <h2 className="text-base md:text-lg font-semibold mb-4 md:mb-5 text-slate-900">Controls</h2>
               <div className="space-y-2 md:space-y-3 text-xs md:text-sm">
@@ -709,7 +700,9 @@ export default function Home() {
                       </div>
                       <div className="flex justify-between">
                         <span>Success Rate:</span>
-                        <span>{Math.round((performanceMetrics.successfulRequests / Math.max(performanceMetrics.totalRequests, 1)) * 100)}%</span>
+                        <span className={getSuccessRateClass(Math.round((performanceMetrics.successfulRequests / Math.max(performanceMetrics.totalRequests, 1)) * 100))}>
+                          {Math.round((performanceMetrics.successfulRequests / Math.max(performanceMetrics.totalRequests, 1)) * 100)}%
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Max Concurrent:</span>
@@ -737,7 +730,7 @@ export default function Home() {
             {/* Center section - Grid */}
             <div className="order-1 lg:order-2 flex-1 flex justify-center overflow-hidden">
               <GridErrorBoundary>
-                <div className="max-h-[60vh] md:max-h-[70vh] lg:max-h-[75vh] overflow-y-auto w-full">
+                <div className="grid-container max-h-[60vh] md:max-h-[70vh] lg:max-h-[75vh] overflow-y-auto w-full">
                   <div className="p-2 sm:p-4 max-w-none">
                     <div className={`grid gap-2 sm:gap-3 mx-auto w-fit max-w-full ${
                       columns === 2 ? 'grid-cols-2' : 'grid-cols-3'

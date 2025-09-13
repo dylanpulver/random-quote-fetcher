@@ -1,4 +1,5 @@
-import { ScrapingProgress, scrapingService } from '@/lib/scraping-service';
+import { scrapingService } from '@/lib/scraping-service';
+import { ScrapingProgress } from '@/lib/types';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
