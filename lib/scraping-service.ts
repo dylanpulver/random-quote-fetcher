@@ -1,4 +1,3 @@
-import chromium from '@sparticuz/chromium';
 import { Browser, Page } from 'puppeteer-core';
 
 export interface Quote {
@@ -45,6 +44,7 @@ class ScrapingService {
         console.log('Using @sparticuz/chromium for serverless environment');
         // Use @sparticuz/chromium for production Linux environments
         const puppeteerCore = await import('puppeteer-core');
+        const chromium = await import('@sparticuz/chromium');
 
         // Define custom viewport as required by new API
         const viewport = {
@@ -58,11 +58,11 @@ class ScrapingService {
 
         const browser = await puppeteerCore.default.launch({
           args: puppeteerCore.default.defaultArgs({
-            args: chromium.args,
+            args: chromium.default.args,
             headless: "shell"
           }),
           defaultViewport: viewport,
-          executablePath: await chromium.executablePath(),
+          executablePath: await chromium.default.executablePath(),
           headless: "shell",
         });
         this.browser = browser as unknown as Browser;
