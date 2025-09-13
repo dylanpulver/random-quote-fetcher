@@ -1,17 +1,5 @@
 import { Browser } from 'puppeteer-core';
-
-export interface Quote {
-  text: string;
-  author: string;
-  tags: string[];
-  sourceUrl?: string;
-}
-
-export interface ScrapingProgress {
-  stage: number;
-  message: string;
-  totalStages: number;
-}
+import { HealthStatus, Quote, ScrapingProgress } from './types';
 
 interface CacheEntry {
   quote: Quote;
@@ -25,11 +13,11 @@ class ScrapingService {
   private quotesCache: Map<string, CacheEntry> = new Map();
   private usedQuotes: Set<string> = new Set();
   private isInitialized = false;
-  private initializationPromise: Promise<void> | null = null; // Prevent multiple concurrent initializations
+  private initializationPromise: Promise<void> | null = null;
 
   // HYBRID APPROACH - Use limited Puppeteer + Cache for high concurrency
-  private readonly MAX_PUPPETEER_CONCURRENT = 5; // Reduced from 10
-  private readonly MAX_CONCURRENT = 300; // Total concurrent support
+  private readonly MAX_PUPPETEER_CONCURRENT = 5;
+  private readonly MAX_CONCURRENT = 300;
   private readonly SCRAPING_QUEUE: Array<() => Promise<void>> = [];
   private activePuppeteerRequests = 0;
   private activeRequests = 0;
@@ -75,23 +63,21 @@ class ScrapingService {
       this.startBackgroundScraping();
 
       this.isInitialized = true;
-      this.initializationPromise = null; // Reset for future re-initializations if needed
+      this.initializationPromise = null;
       console.log(`Scraping service initialized with ${this.quotesCache.size} real quotes from quotes.toscrape.com`);
     } catch (error) {
       console.error('Failed to initialize scraping service:', error);
-      this.initializationPromise = null; // Reset so we can try again
-      // Don't fall back to fake quotes - let it fail and scrape on demand
+      this.initializationPromise = null;
       this.isInitialized = true;
     }
   }
 
-  // Pre-populate cache through background scraping - NO hardcoded quotes
   private async initializeCache() {
     console.log('Starting initial cache population from quotes.toscrape.com...');
 
     // Scrape multiple pages immediately to populate cache
     const initialScrapePromises = [];
-    for (let page = 1; page <= 3; page++) { // Reduced from 5 to 3 to be gentler
+    for (let page = 1; page <= 3; page++) {
       initialScrapePromises.push(this.scrapePageToCache(page));
     }
 
@@ -101,7 +87,6 @@ class ScrapingService {
       console.log(`Initial cache populated with ${this.quotesCache.size} real quotes from website (${successful}/${results.length} pages successful)`);
     } catch (error) {
       console.error('Failed to populate initial cache:', error);
-      // If we can't scrape, the app should fail gracefully but still try to scrape on demand
     }
   }
 
@@ -177,7 +162,7 @@ class ScrapingService {
         try {
           await page.goto('https://quotes.toscrape.com/login', {
             waitUntil: 'domcontentloaded',
-            timeout: 15000 // Increased timeout
+            timeout: 15000
           });
           await page.type('input[name="username"]', 'admin');
           await page.type('input[name="password"]', 'admin');
@@ -254,23 +239,20 @@ class ScrapingService {
   }
 
   private startBackgroundScraping() {
-    // Clear existing timer if any
     if (this.backgroundScrapingTimer) {
       clearInterval(this.backgroundScrapingTimer);
     }
 
-    // Continuously scrape in background to keep cache fresh with REAL quotes
     this.backgroundScrapingTimer = setInterval(async () => {
       if (this.quotesCache.size < this.MAX_CACHE_SIZE / 2 && this.activePuppeteerRequests < this.MAX_PUPPETEER_CONCURRENT) {
         try {
-          // Scrape a random page from the website
           const randomPage = Math.floor(Math.random() * 10) + 1;
           await this.scrapePageToCache(randomPage);
         } catch (error) {
           console.warn('Background scraping failed:', error);
         }
       }
-    }, 60000); // Every 60 seconds instead of 30
+    }, 60000);
   }
 
   private startCleanupTimer() {
@@ -309,7 +291,6 @@ class ScrapingService {
     if (this.usedQuotes.size > this.MAX_USED_QUOTES) {
       const usedArray = Array.from(this.usedQuotes);
       this.usedQuotes.clear();
-      // Keep the most recent half
       usedArray.slice(-Math.floor(this.MAX_USED_QUOTES / 2))
         .forEach(quote => this.usedQuotes.add(quote));
     }
@@ -319,14 +300,12 @@ class ScrapingService {
     }
   }
 
-  // ENHANCED CONCURRENCY - Process multiple requests immediately
   private async processQueue() {
     while (this.activeRequests < this.MAX_CONCURRENT && this.SCRAPING_QUEUE.length > 0) {
       const task = this.SCRAPING_QUEUE.shift();
       if (task) {
         this.activeRequests++;
 
-        // Run tasks concurrently without waiting
         task().finally(() => {
           this.activeRequests--;
           setImmediate(() => this.processQueue());
@@ -372,7 +351,6 @@ class ScrapingService {
       return randomQuote;
     }
 
-    // If no cache available, scrape on-demand from the website
     console.log('Cache empty, scraping on-demand from quotes.toscrape.com');
 
     // If we've exhausted all quotes, reset the used set
@@ -420,7 +398,6 @@ class ScrapingService {
     for (let i = 0; i < stages.length; i++) {
       onProgress?.({ stage: i + 1, message: stages[i], totalStages: 6 });
       if (i < stages.length - 1) {
-        // Very fast for 300 concurrent
         await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 50));
       }
     }
@@ -463,7 +440,7 @@ class ScrapingService {
   get activeRequestsCount() { return this.activeRequests; }
   get maxConcurrent() { return this.MAX_CONCURRENT; }
 
-  getHealthStatus() {
+  getHealthStatus(): HealthStatus {
     return {
       initialized: this.isInitialized,
       cacheSize: this.cacheSize,

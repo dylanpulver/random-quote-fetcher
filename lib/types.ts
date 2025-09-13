@@ -25,13 +25,16 @@ export interface ApiResponse {
   error?: string;
   details?: string;
   method?: string;
-  cacheInfo?: {
-    puppeteerCache: number;
-    simpleCache: number;
-    usedQuotes: number;
-    queueLength: number;
-    activeRequests: number;
-  };
+  cacheInfo?: CacheInfo;
+}
+
+export interface CacheInfo {
+  puppeteerCache?: number;
+  simpleCache?: number;
+  usedQuotes: number;
+  queueLength: number;
+  activeRequests: number;
+  cacheSize?: number;
 }
 
 export interface SSEMessage {
@@ -41,5 +44,34 @@ export interface SSEMessage {
   quote?: Quote;
   error?: string;
   totalStages?: number;
+  timestamp: number;
+}
+
+export interface PerformanceMetrics {
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  averageResponseTime: number;
+  concurrentRequests: number;
+  maxConcurrentReached: number;
+}
+
+export interface HealthStatus {
+  initialized: boolean;
+  cacheSize: number;
+  usedQuotes: number;
+  activeRequests: number;
+  maxConcurrent: number;
+  queueLength: number;
+  puppeteerActive: number;
+  browserConnected: boolean;
+}
+
+export type ScrapingError = 'NETWORK_ERROR' | 'BROWSER_ERROR' | 'PARSING_ERROR' | 'TIMEOUT_ERROR' | 'UNKNOWN_ERROR';
+
+export interface ScrapingErrorDetails {
+  type: ScrapingError;
+  message: string;
+  cellId?: number;
   timestamp: number;
 }

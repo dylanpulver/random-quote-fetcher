@@ -1,24 +1,9 @@
 "use client"
 
+import { PerformanceMetrics, Quote } from "@/lib/types";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { APIErrorBoundary, ErrorBoundary, GridErrorBoundary, useErrorHandler } from "../components/ErrorBoundary";
-
-interface Quote {
-  text: string;
-  author: string;
-  tags: string[];
-  sourceUrl?: string;
-}
-
-interface PerformanceMetrics {
-  totalRequests: number;
-  successfulRequests: number;
-  failedRequests: number;
-  averageResponseTime: number;
-  concurrentRequests: number;
-  maxConcurrentReached: number;
-}
 
 export default function Home() {
   const [focusedCell, setFocusedCell] = useState<number | null>(null)

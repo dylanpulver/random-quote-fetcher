@@ -1,4 +1,5 @@
 import { scrapingService } from '@/lib/scraping-service';
+import { CacheInfo } from '@/lib/types';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -22,20 +23,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use the main scraping service with built-in fallbacks
     const quote = await scrapingService.getRandomQuote();
+
+    const cacheInfo: CacheInfo = {
+      cacheSize: scrapingService.cacheSize,
+      usedQuotes: scrapingService.usedQuotesCount,
+      queueLength: scrapingService.queueLength,
+      activeRequests: scrapingService.activeRequestsCount
+    };
 
     return NextResponse.json({
       success: true,
       cellId,
       quote,
       method: 'intelligent-scraper',
-      cacheInfo: {
-        cacheSize: scrapingService.cacheSize,
-        usedQuotes: scrapingService.usedQuotesCount,
-        queueLength: scrapingService.queueLength,
-        activeRequests: scrapingService.activeRequestsCount
-      }
+      cacheInfo
     });
 
   } catch (error) {
@@ -52,13 +54,15 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  const cacheInfo: CacheInfo = {
+    cacheSize: scrapingService.cacheSize,
+    usedQuotes: scrapingService.usedQuotesCount,
+    queueLength: scrapingService.queueLength,
+    activeRequests: scrapingService.activeRequestsCount
+  };
+
   return NextResponse.json({
     status: 'Quote scraping service is running',
-    cacheInfo: {
-      cacheSize: scrapingService.cacheSize,
-      usedQuotes: scrapingService.usedQuotesCount,
-      queueLength: scrapingService.queueLength,
-      activeRequests: scrapingService.activeRequestsCount
-    }
+    cacheInfo
   });
 }
