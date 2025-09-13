@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { APIErrorBoundary, ErrorBoundary, GridErrorBoundary, useErrorHandler } from "../components/ErrorBoundary";
 
@@ -566,15 +567,20 @@ export default function Home() {
 
               <div className="relative py-6 md:py-8 px-4 md:px-6">
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-3">
-                  <img
-                    src="/images/quote-logo.png"
-                    alt="Quote Fetcher Logo"
-                    className="w-12 h-12 md:w-14 md:h-14 object-contain"
-                    onError={(e) => {
-                      // Hide broken image gracefully
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
+                  <div className="w-12 h-12 md:w-14 md:h-14 relative">
+                    <Image
+                      src="/images/quote-logo.png"
+                      alt="Quote Fetcher Logo"
+                      width={56}
+                      height={56}
+                      className="object-contain"
+                      priority
+                      onError={(e) => {
+                        // Hide broken image gracefully
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
                   <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent text-center sm:text-left">
                     Random Quote Fetcher
                   </h1>

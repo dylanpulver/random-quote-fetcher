@@ -102,7 +102,7 @@ class ScrapingService {
             '--single-process', // Important for high concurrency
             '--no-zygote'
           ],
-          defaultViewport: chromium.default.defaultViewport,
+          defaultViewport: { width: 1280, height: 720 }, // Set explicit viewport
           executablePath: await chromium.default.executablePath(),
           headless: "shell",
         }) as unknown as Browser;
