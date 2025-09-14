@@ -89,33 +89,70 @@ performLRUEviction(): void {
 
 ## Scaling Discussion
 
-### Current Scale (Production Ready)
-- **100 quotes**: Immediate response from cache
-- **1K quotes**: Cache + background scraping
-- **10K quotes**: Current architecture with optimizations
+The current architecture serves as a foundation that can evolve through several scaling phases, each requiring different architectural decisions and tradeoffs.
 
-### Proposed Scaling Strategy
+### Current Scale (Production Ready - 100-1K quotes)
 
-**10K - 100K Quotes:**
-1. **Database Layer**: PostgreSQL with indexed author/tag tables
-2. **Pre-population Strategy**: Batch scraping with scheduled updates
-3. **CDN Caching**: Static quote data with API for fresh content
-4. **Horizontal Scaling**: Multiple scraping instances
+The existing system handles immediate production needs through intelligent caching and real-time scraping. With ~100 quotes available from quotes.toscrape.com (10 pages × ~10 quotes each), the LRU cache provides excellent hit rates after initial population. Memory management prevents cache bloat, and the dual-scraping strategy (Puppeteer + fallback) ensures reliability.
 
-**100K - 1M+ Quotes:**
-1. **Microservices Architecture**: Separate scraping, caching, and API services
-2. **Queue System**: Redis/RabbitMQ for distributed job processing
-3. **Database Sharding**: Partition by author, category, or hash
-4. **Rate Limiting**: Respect source website limits with intelligent delays
+**Performance characteristics**: Sub-2-second response times, 95%+ cache hit rates after warmup, graceful handling of concurrent users.
 
-**Data Model Evolution:**
+### Mid-Scale Evolution (1K-10K quotes)
+
+At this scale, the fundamental shift is from "scrape-on-demand" to "scrape-and-store" patterns. The current real-time scraping approach becomes a bottleneck when quote diversity demands exceed what a single source can provide.
+
+**Architecture changes needed:**
+- **Pre-population strategy**: Background jobs scrape and store quotes in PostgreSQL during off-peak hours
+- **Source diversification**: Expand beyond quotes.toscrape.com to multiple quote sources (APIs, RSS feeds, other scraping targets)
+- **Intelligent cache warming**: Predict popular quotes and pre-load them based on usage patterns
+- **Database optimization**: Add indexes on author, tags, and full-text search capabilities
+
+The current `QuoteCacheService` would evolve into a multi-tier caching system: L1 (in-memory), L2 (Redis), L3 (Database). The Puppeteer scraping layer becomes a background service rather than user-facing.
+
+### Large Scale Architecture (10K-100K quotes)
+
+This scale requires fundamental architectural changes driven by both data volume and user concurrency concerns.
+
+**Data architecture**: The current denormalized model (embedded author/tags in Quote objects) hits its limits. A normalized schema becomes essential:
+
 ```sql
--- Normalized schema for scale
-quotes(id, text, author_id, created_at, source_url)
-authors(id, name, bio, birth_year)
-tags(id, name, category)
-quote_tags(quote_id, tag_id)
+quotes(id, text, author_id, source_id, created_at, quality_score)
+authors(id, name, bio, birth_year, popularity_rank)
+sources(id, name, base_url, scraping_config, rate_limits)
+tags(id, name, category, usage_count)
+quote_tags(quote_id, tag_id, relevance_score)
 ```
+
+**Service decomposition**: The monolithic Next.js app splits into specialized services:
+- **Quote API Service**: Fast read operations with Redis caching
+- **Scraping Service**: Distributed workers handling multiple sources
+- **Search Service**: Elasticsearch for complex author/tag/content queries
+- **Admin Service**: Content moderation and source management
+
+**Performance considerations**: Database sharding becomes necessary, likely by author or content hash. CDN layers cache popular quotes globally. The current SSE progress updates become WebSocket connections for real-time features.
+
+### Enterprise Scale (100K-1M+ quotes)
+
+At this scale, the system resembles enterprise content management platforms, requiring sophisticated data engineering and operational capabilities.
+
+**Distributed data strategy**: Geographic distribution with eventual consistency. Quote data gets replicated across regions, with write operations potentially having slight delays. The current cache eviction logic evolves into sophisticated data lifecycle management.
+
+**Source management complexity**: Instead of manually configuring scrapers, the system needs intelligent source discovery, quality scoring, and automatic rate limit detection. Machine learning models might predict quote popularity and optimize scraping priorities.
+
+**Operational requirements**:
+- **Monitoring**: The current performance metrics expand into full observability (distributed tracing, log aggregation, SLA monitoring)
+- **Data quality**: Automated duplicate detection, sentiment analysis, content filtering
+- **Compliance**: Data retention policies, source attribution requirements, potentially GDPR considerations
+
+The current error boundary patterns become comprehensive circuit breaker implementations across service boundaries.
+
+### Key Architectural Decisions & Tradeoffs
+
+**Consistency vs. Availability**: The current system prioritizes availability (degraded service over no service). At scale, this becomes a classic CAP theorem decision. For quote content, eventual consistency is acceptable, but user preferences might require stronger consistency guarantees.
+
+**Cost vs. Performance**: Real-time scraping is expensive but provides fresh content. Pre-population is cheaper but risks stale data. The optimal balance shifts based on user expectations and business requirements.
+
+**Complexity vs. Maintainability**: Each scaling phase adds operational complexity. The current simple deployment (single Vercel function) evolves into multi-service orchestration requiring container management, service mesh, and sophisticated deployment pipelines.
 
 ## System Limitations & Solutions
 
