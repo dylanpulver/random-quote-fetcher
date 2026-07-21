@@ -301,4 +301,3 @@ npm start
 
 **Built for Legix Engineering Assessment**
 *Demonstrating full-stack development, performance optimization, and production readiness*
-<!-- vercel author test a -->
